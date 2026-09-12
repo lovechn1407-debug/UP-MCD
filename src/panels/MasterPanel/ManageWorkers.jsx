@@ -97,12 +97,12 @@ export default function ManageWorkers() {
 
       <div className="data-table-wrap">
         <table className="data-table">
-          <thead><tr><th>Name</th><th>User ID</th><th>Phone</th><th>District</th><th>Address</th></tr></thead>
+          <thead><tr><th>Name</th><th>User ID</th><th>Password</th><th>Phone</th><th>District</th><th>Address</th></tr></thead>
           <tbody>
-            {loading ? <tr><td colSpan="5" className="text-center">Loading...</td></tr> :
-              workers.length === 0 ? <tr><td colSpan="5" className="text-center">No workers yet</td></tr> :
+            {loading ? <tr><td colSpan="6" className="text-center">Loading...</td></tr> :
+              workers.length === 0 ? <tr><td colSpan="6" className="text-center">No workers yet</td></tr> :
               workers.map(w => (
-                <tr key={w.id}><td>{w.name}</td><td><code>{w.userId}</code></td><td>{w.phone}</td><td>{w.districtId}</td><td>{w.address}</td></tr>
+                <tr key={w.id}><td>{w.name}</td><td><code>{w.userId}</code></td><td><code>{w.password}</code></td><td>{w.phone}</td><td>{w.districtId}</td><td>{w.address}</td></tr>
               ))}
           </tbody>
         </table>

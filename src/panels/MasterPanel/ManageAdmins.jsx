@@ -100,14 +100,14 @@ export default function ManageAdmins() {
 
       <div className="data-table-wrap">
         <table className="data-table">
-          <thead><tr><th>Name</th><th>User ID</th><th>District</th><th>Phone</th></tr></thead>
+          <thead><tr><th>Name</th><th>User ID</th><th>Password</th><th>District</th><th>Phone</th></tr></thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan="4" className="text-center">Loading...</td></tr>
+              <tr><td colSpan="5" className="text-center">Loading...</td></tr>
             ) : admins.length === 0 ? (
-              <tr><td colSpan="4" className="text-center">No admins yet</td></tr>
+              <tr><td colSpan="5" className="text-center">No admins yet</td></tr>
             ) : admins.map(a => (
-              <tr key={a.id}><td>{a.name}</td><td><code>{a.userId}</code></td><td>{a.districtId}</td><td>{a.phone}</td></tr>
+              <tr key={a.id}><td>{a.name}</td><td><code>{a.userId}</code></td><td><code>{a.password}</code></td><td>{a.districtId}</td><td>{a.phone}</td></tr>
             ))}
           </tbody>
         </table>

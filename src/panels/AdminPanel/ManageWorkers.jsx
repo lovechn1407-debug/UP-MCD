@@ -81,11 +81,11 @@ export default function AdminManageWorkers() {
 
       <div className="data-table-wrap">
         <table className="data-table">
-          <thead><tr><th>Name</th><th>User ID</th><th>Phone</th><th>Address</th></tr></thead>
+          <thead><tr><th>Name</th><th>User ID</th><th>Password</th><th>Phone</th><th>Address</th></tr></thead>
           <tbody>
-            {loading ? <tr><td colSpan="4">Loading...</td></tr> :
-              workers.length === 0 ? <tr><td colSpan="4" className="text-center">No workers added yet</td></tr> :
-              workers.map(w => <tr key={w.id}><td>{w.name}</td><td><code>{w.userId}</code></td><td>{w.phone}</td><td>{w.address}</td></tr>)}
+            {loading ? <tr><td colSpan="5">Loading...</td></tr> :
+              workers.length === 0 ? <tr><td colSpan="5" className="text-center">No workers added yet</td></tr> :
+              workers.map(w => <tr key={w.id}><td>{w.name}</td><td><code>{w.userId}</code></td><td><code>{w.password}</code></td><td>{w.phone}</td><td>{w.address}</td></tr>)}
           </tbody>
         </table>
       </div>
