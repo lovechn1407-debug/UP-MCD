@@ -1,99 +1,165 @@
-import React, { useState } from 'react';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { AppProvider } from './context/AppContext';
-import { Navbar } from './components/Navbar';
-import { ProfileModal } from './components/ProfileModal';
-import { Leaderboard } from './components/Leaderboard';
-import { LoginPanel } from './panels/LoginPanel';
-import { MasterPanel } from './panels/MasterPanel';
-import { AdminPanel } from './panels/AdminPanel';
-import { WorkerPanel } from './panels/WorkerPanel';
-import { ClientPanel } from './panels/ClientPanel';
-import { ShieldCheck, Building2, Heart } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from './context/AuthContext';
+import { ToastProvider } from './components/Toast';
+import { getSettings } from './services/firestore';
+import LoginPanel from './panels/LoginPanel';
+import Navbar from './components/Navbar';
+import Sidebar from './components/Sidebar';
 
-const MainContent = () => {
-  const { currentUser, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [showProfileModal, setShowProfileModal] = useState(false);
+// Master Panel
+import MasterDashboard from './panels/MasterPanel/MasterDashboard';
+import ManageAdmins from './panels/MasterPanel/ManageAdmins';
+import ManageDistricts from './panels/MasterPanel/ManageDistricts';
+import ManageWorkersMaster from './panels/MasterPanel/ManageWorkers';
+import ViewClients from './panels/MasterPanel/ViewClients';
+import ViewComplaints from './panels/MasterPanel/ViewComplaints';
+import HonorScores from './panels/MasterPanel/HonorScores';
+import SiteSettings from './panels/MasterPanel/SiteSettings';
+
+// Admin Panel
+import AdminDashboard from './panels/AdminPanel/AdminDashboard';
+import ComplaintsList from './panels/AdminPanel/ComplaintsList';
+import AdminManageWorkers from './panels/AdminPanel/ManageWorkers';
+
+// Worker Panel
+import WorkerDashboard from './panels/WorkerPanel/WorkerDashboard';
+import AssignedTasks from './panels/WorkerPanel/AssignedTasks';
+
+// Client Panel
+import ClientDashboard from './panels/ClientPanel/ClientDashboard';
+import NewComplaint from './panels/ClientPanel/NewComplaint';
+import MyComplaints from './panels/ClientPanel/MyComplaints';
+import Leaderboard from './panels/ClientPanel/Leaderboard';
+
+const SIDEBAR_MENUS = {
+  master: [
+    { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
+    { id: 'admins', label: 'Manage Admins', icon: 'admins' },
+    { id: 'districts', label: 'Manage Districts', icon: 'districts' },
+    { id: 'workers', label: 'Manage Workers', icon: 'workers' },
+    { id: 'clients', label: 'View Clients', icon: 'clients' },
+    { id: 'complaints', label: 'View Complaints', icon: 'complaints' },
+    { id: 'leaderboard', label: 'Honor Scores', icon: 'leaderboard' },
+    { id: 'settings', label: 'Site Settings', icon: 'settings' }
+  ],
+  admin: [
+    { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
+    { id: 'complaints', label: 'Complaints', icon: 'complaints' },
+    { id: 'workers', label: 'My Workers', icon: 'workers' }
+  ],
+  worker: [
+    { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
+    { id: 'tasks', label: 'Assigned Tasks', icon: 'tasks' }
+  ],
+  client: [
+    { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
+    { id: 'newComplaint', label: 'File Complaint', icon: 'newComplaint' },
+    { id: 'myComplaints', label: 'My Complaints', icon: 'complaints' },
+    { id: 'leaderboard', label: 'Leaderboard', icon: 'leaderboard' }
+  ]
+};
+
+function AppContent() {
+  const { isAuthenticated, loading, role, userData } = useAuth();
+  const [activePanel, setActivePanel] = useState('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [siteTitle, setSiteTitle] = useState('UP Municipal Civic Desk');
+  const [siteLogo, setSiteLogo] = useState('');
+
+  useEffect(() => {
+    getSettings().then(s => {
+      if (s) {
+        setSiteTitle(s.siteTitle || 'UP Municipal Civic Desk');
+        setSiteLogo(s.siteLogo || '');
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    setActivePanel('dashboard');
+  }, [role]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white space-y-4">
-        <div className="w-12 h-12 border-4 border-amber-400 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-semibold tracking-wider text-slate-300">Loading UP Municipal Portal...</p>
+      <div className="loading-screen">
+        <div className="loading-spinner" />
+        <p>Loading UP-MCD...</p>
       </div>
     );
   }
 
-  if (!currentUser) {
+  if (!isAuthenticated) {
     return <LoginPanel />;
   }
 
+  const menuItems = SIDEBAR_MENUS[role] || SIDEBAR_MENUS.client;
+
+  const renderPanel = () => {
+    if (role === 'master') {
+      switch (activePanel) {
+        case 'dashboard': return <MasterDashboard onNavigate={setActivePanel} />;
+        case 'admins': return <ManageAdmins />;
+        case 'districts': return <ManageDistricts />;
+        case 'workers': return <ManageWorkersMaster />;
+        case 'clients': return <ViewClients />;
+        case 'complaints': return <ViewComplaints />;
+        case 'leaderboard': return <HonorScores />;
+        case 'settings': return <SiteSettings />;
+        default: return <MasterDashboard onNavigate={setActivePanel} />;
+      }
+    }
+    if (role === 'admin') {
+      switch (activePanel) {
+        case 'dashboard': return <AdminDashboard onNavigate={setActivePanel} />;
+        case 'complaints': return <ComplaintsList />;
+        case 'workers': return <AdminManageWorkers />;
+        default: return <AdminDashboard onNavigate={setActivePanel} />;
+      }
+    }
+    if (role === 'worker') {
+      switch (activePanel) {
+        case 'dashboard': return <WorkerDashboard />;
+        case 'tasks': return <AssignedTasks />;
+        default: return <WorkerDashboard />;
+      }
+    }
+    // Client
+    switch (activePanel) {
+      case 'dashboard': return <ClientDashboard onNavigate={setActivePanel} />;
+      case 'newComplaint': return <NewComplaint onBack={() => setActivePanel('dashboard')} />;
+      case 'myComplaints': return <MyComplaints />;
+      case 'leaderboard': return <Leaderboard />;
+      default: return <ClientDashboard onNavigate={setActivePanel} />;
+    }
+  };
+
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
-      {/* Top Header Navigation */}
+    <div className="app-layout">
       <Navbar
-        onOpenProfile={() => setShowProfileModal(true)}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        siteTitle={siteTitle}
+        siteLogo={siteLogo}
+        onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
       />
-
-      {/* Main View Area */}
-      <main className="flex-1">
-        {activeTab === 'leaderboard' ? (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <Leaderboard />
-          </div>
-        ) : (
-          <>
-            {currentUser.role === 'master' && <MasterPanel />}
-            {currentUser.role === 'admin' && <AdminPanel />}
-            {currentUser.role === 'worker' && <WorkerPanel />}
-            {currentUser.role === 'client' && <ClientPanel />}
-          </>
-        )}
-      </main>
-
-      {/* Footer */}
-      <footer className="bg-slate-900 text-white border-t border-slate-800 py-8 px-4 sm:px-6 lg:px-8 mt-12">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white">
-              <Building2 className="w-5 h-5 text-amber-400" />
-            </div>
-            <div>
-              <p className="font-extrabold text-slate-200">Department of Appointment & Personnel, Govt. of Uttar Pradesh</p>
-              <p className="text-[11px] text-slate-400">Swachh Bharat Mission • Jan Seva Municipal Redressal Cell</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-6">
-            <span className="flex items-center gap-1 text-slate-300">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              Official Portal Standard V2.5
-            </span>
-            <span>Helpline: 1800-180-0001</span>
-          </div>
-        </div>
-      </footer>
-
-      {/* Profile Modal */}
-      <ProfileModal
-        isOpen={showProfileModal}
-        onClose={() => setShowProfileModal(false)}
-      />
+      <div className="app-layout__body">
+        <Sidebar
+          items={menuItems}
+          activeItem={activePanel}
+          onItemClick={setActivePanel}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
+        <main className="app-layout__main">
+          {renderPanel()}
+        </main>
+      </div>
     </div>
-  );
-};
-
-export function App() {
-  return (
-    <AuthProvider>
-      <AppProvider>
-        <MainContent />
-      </AppProvider>
-    </AuthProvider>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
+  );
+}

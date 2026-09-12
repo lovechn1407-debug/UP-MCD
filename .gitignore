@@ -1,9 +1,6 @@
 node_modules
 dist
+.env
+.env.local
+*.log
 .DS_Store
-*.local
-ocr_run.ps1
-page_*.png
-page_*.jpg
-page_*.jpeg
-page_*_dpi150.png

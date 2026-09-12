@@ -1,155 +1,116 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User, Key, Phone, MapPin, X, Check, ShieldCheck } from 'lucide-react';
+import { useToast } from './Toast';
+import { updateUser } from '../services/firestore';
+import { changePassword } from '../services/auth';
+import { uploadToImgbb } from '../services/imgbb';
 
-export const ProfileModal = ({ isOpen, onClose }) => {
-  const { currentUser, updateUserProfile } = useAuth();
+export default function ProfileModal({ onClose }) {
+  const { userData, refreshUserData } = useAuth();
+  const toast = useToast();
+  const [name, setName] = useState(userData?.name || '');
+  const [phone, setPhone] = useState(userData?.phone || '');
+  const [address, setAddress] = useState(userData?.address || '');
+  const [newPassword, setNewPassword] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const [name, setName] = useState(currentUser?.name || '');
-  const [phone, setPhone] = useState(currentUser?.phone || '');
-  const [address, setAddress] = useState(currentUser?.address || '');
-  const [password, setPassword] = useState('');
-  const [savedSuccess, setSavedSuccess] = useState(false);
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const url = await uploadToImgbb(file);
+      await updateUser(userData.id, { profilePic: url });
+      await refreshUserData();
+      toast.success('Profile photo updated!');
+    } catch (err) {
+      toast.error('Failed to upload photo');
+    }
+    setUploading(false);
+  };
 
-  if (!isOpen || !currentUser) return null;
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    updateUserProfile({
-      name,
-      phone,
-      address,
-      ...(password ? { customPass: password } : {})
-    });
-    setSavedSuccess(true);
-    setTimeout(() => {
-      setSavedSuccess(false);
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await updateUser(userData.id, { name, phone, address });
+      if (newPassword && userData.role !== 'client') {
+        await changePassword(newPassword);
+        await updateUser(userData.id, { password: newPassword });
+      }
+      await refreshUserData();
+      toast.success('Profile updated!');
       onClose();
-    }, 1200);
+    } catch (err) {
+      toast.error('Failed to update profile: ' + err.message);
+    }
+    setSaving(false);
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 relative animate-in fade-in zoom-in-95 duration-200">
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-700">
-            <User className="w-6 h-6" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-slate-900">Account Profile & Settings</h3>
-            <p className="text-xs text-slate-500">Update personal details, credentials, and contact info</p>
-          </div>
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <div className="modal__header">
+          <h2>Profile Settings</h2>
+          <button className="modal__close" onClick={onClose}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
         </div>
 
-        {/* Role Identity Card */}
-        <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 mb-5 flex items-center justify-between text-xs">
-          <div>
-            <span className="text-slate-500 font-medium">Account Role: </span>
-            <span className="font-bold uppercase text-blue-900">{currentUser.role}</span>
+        <div className="modal__body">
+          <div className="profile-photo-section">
+            <div className="profile-photo">
+              {userData?.profilePic ? (
+                <img src={userData.profilePic} alt="Profile" />
+              ) : (
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="1.5">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                </svg>
+              )}
+            </div>
+            <label className="btn btn--outline btn--sm">
+              {uploading ? 'Uploading...' : 'Change Photo'}
+              <input type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
+            </label>
           </div>
-          <div>
-            <span className="text-slate-500 font-medium">Login ID: </span>
-            <span className="font-mono bg-white px-2 py-0.5 rounded border border-slate-200 font-semibold text-slate-800">
-              {currentUser.loginId || currentUser.email || currentUser.uid}
-            </span>
+
+          <div className="form-group">
+            <label>User ID</label>
+            <input type="text" value={userData?.userId || ''} disabled className="input" />
           </div>
+          <div className="form-group">
+            <label>Role</label>
+            <input type="text" value={userData?.role?.toUpperCase() || ''} disabled className="input" />
+          </div>
+          <div className="form-group">
+            <label>Name</label>
+            <input type="text" value={name} onChange={e => setName(e.target.value)} className="input" />
+          </div>
+          <div className="form-group">
+            <label>Phone</label>
+            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="input" />
+          </div>
+          <div className="form-group">
+            <label>Address</label>
+            <textarea value={address} onChange={e => setAddress(e.target.value)} className="input textarea" rows={3} />
+          </div>
+          {userData?.role !== 'client' && (
+            <div className="form-group">
+              <label>New Password (leave blank to keep current)</label>
+              <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="input" placeholder="Enter new password" />
+            </div>
+          )}
         </div>
 
-        {savedSuccess ? (
-          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-4 text-center my-4 flex items-center justify-center gap-2 font-semibold">
-            <Check className="w-5 h-5 text-emerald-600" />
-            Profile details updated successfully!
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Full Name */}
-            <div>
-              <label className="label-title flex items-center gap-1.5">
-                <User className="w-4 h-4 text-slate-500" />
-                Full Name
-              </label>
-              <input
-                type="text"
-                className="input-field"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
-
-            {/* Mobile Phone */}
-            <div>
-              <label className="label-title flex items-center gap-1.5">
-                <Phone className="w-4 h-4 text-slate-500" />
-                Mobile Contact Number
-              </label>
-              <input
-                type="tel"
-                className="input-field"
-                placeholder="+91 9876543210"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
-            </div>
-
-            {/* Address */}
-            <div>
-              <label className="label-title flex items-center gap-1.5">
-                <MapPin className="w-4 h-4 text-slate-500" />
-                Residential / Office Address
-              </label>
-              <textarea
-                className="input-field min-h-[80px]"
-                placeholder="Enter complete street address, locality, city..."
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-              />
-            </div>
-
-            {/* Optional Password Update */}
-            <div>
-              <label className="label-title flex items-center gap-1.5">
-                <Key className="w-4 h-4 text-slate-500" />
-                Change Password (Optional)
-              </label>
-              <input
-                type="password"
-                className="input-field"
-                placeholder="Leave blank to keep existing password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
-              <button
-                type="button"
-                onClick={onClose}
-                className="btn-secondary"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="btn-primary"
-              >
-                <ShieldCheck className="w-4 h-4" />
-                Save Profile Changes
-              </button>
-            </div>
-          </form>
-        )}
+        <div className="modal__footer">
+          <button className="btn btn--ghost" onClick={onClose}>Cancel</button>
+          <button className="btn btn--primary" onClick={handleSave} disabled={saving}>
+            {saving ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
       </div>
     </div>
   );
-};
+}

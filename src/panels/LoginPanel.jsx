@@ -1,254 +1,173 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { useApp } from '../context/AppContext';
-import { ShieldAlert, Building2, User, LogIn, Lock, CheckCircle2, AlertCircle, HardHat } from 'lucide-react';
+import { loginWithCredentials, loginWithGoogle } from '../services/auth';
+import { getUserByLoginId, findUserByEmail } from '../services/firestore';
+import { useToast } from '../components/Toast';
 
-export const LoginPanel = () => {
-  const { loginWithGoogle, loginWithCredentials } = useAuth();
-  const { districts, workers } = useApp();
-
-  const [activeTab, setActiveTab] = useState('client'); // 'client', 'admin_worker', 'master'
-  const [loginId, setLoginId] = useState('');
+export default function LoginPanel() {
+  const [activeTab, setActiveTab] = useState('client');
+  const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const toast = useToast();
+
+  const tabs = [
+    { id: 'client', label: 'Citizen', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
+    { id: 'admin', label: 'Admin (DM)', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> },
+    { id: 'worker', label: 'Worker', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> },
+    { id: 'master', label: 'Master', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9"/></svg> }
+  ];
+
+  const handleCredentialLogin = async (role) => {
+    if (!userId || !password) {
+      setError('Please enter User ID and Password');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      // Check Firestore for user record
+      const userDoc = await getUserByLoginId(userId, role);
+      if (!userDoc) {
+        setError('Invalid User ID. Account not found.');
+        setLoading(false);
+        return;
+      }
+      if (userDoc.password !== password) {
+        setError('Invalid password.');
+        setLoading(false);
+        return;
+      }
+      // Login via Firebase Auth
+      await loginWithCredentials(userId, password);
+      toast.success('Login successful!');
+    } catch (err) {
+      console.error(err);
+      setError('Login failed: ' + (err.message || 'Unknown error'));
+    }
+    setLoading(false);
+  };
 
   const handleGoogleLogin = async () => {
     setLoading(true);
-    setErrorMsg('');
-    const res = await loginWithGoogle();
+    setError('');
+    try {
+      await loginWithGoogle();
+      toast.success('Welcome!');
+    } catch (err) {
+      setError('Google sign-in failed: ' + (err.message || 'Unknown error'));
+    }
     setLoading(false);
-    if (!res.success) {
-      setErrorMsg(res.error || "Google login failed. Please try again.");
-    }
-  };
-
-  const handleCredentialsLogin = (e) => {
-    e.preventDefault();
-    setErrorMsg('');
-
-    if (!loginId || !password) {
-      setErrorMsg("Please enter both User ID / Email and Password.");
-      return;
-    }
-
-    setLoading(true);
-    const res = loginWithCredentials(loginId, password, districts, workers);
-    setLoading(false);
-
-    if (!res.success) {
-      setErrorMsg(res.error);
-    }
-  };
-
-  const fillDemo = (id, pass) => {
-    setLoginId(id);
-    setPassword(pass);
-    setErrorMsg('');
   };
 
   return (
-    <div className="login-wrapper">
-      <div className="login-card">
-        {/* Header */}
-        <div className="login-header">
-          <div className="login-logo">
-            <Building2 style={{ width: '36px', height: '36px' }} />
-          </div>
-          <span className="login-tag">Government of Uttar Pradesh</span>
-          <h2 className="login-title">UP Municipal Civic Complaint Portal</h2>
-          <p className="login-subtitle">Integrated Portal for Citizens, District Magistrates, and Field Officers</p>
-        </div>
+    <div className="login-page">
+      <div className="login-page__flag">
+        <div className="flag-stripe__saffron" />
+        <div className="flag-stripe__white" />
+        <div className="flag-stripe__green" />
+      </div>
 
-        {/* Role Tabs */}
-        <div className="tab-group">
-          <button
-            type="button"
-            onClick={() => { setActiveTab('client'); setErrorMsg(''); }}
-            className={`tab-btn ${activeTab === 'client' ? 'active' : ''}`}
-          >
-            <User style={{ width: '16px', height: '16px', color: '#10b981' }} />
-            Client Panel
-          </button>
-
-          <button
-            type="button"
-            onClick={() => { setActiveTab('admin_worker'); setErrorMsg(''); }}
-            className={`tab-btn ${activeTab === 'admin_worker' ? 'active' : ''}`}
-          >
-            <Building2 style={{ width: '16px', height: '16px', color: '#2563eb' }} />
-            Admin / Worker
-          </button>
-
-          <button
-            type="button"
-            onClick={() => { setActiveTab('master'); setErrorMsg(''); }}
-            className={`tab-btn ${activeTab === 'master' ? 'active' : ''}`}
-          >
-            <ShieldAlert style={{ width: '16px', height: '16px', color: '#9333ea' }} />
-            Master Panel
-          </button>
-        </div>
-
-        {/* Error Alert */}
-        {errorMsg && (
-          <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#991b1b', padding: '0.75rem', borderRadius: '10px', fontSize: '0.825rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <AlertCircle style={{ width: '18px', height: '18px', flexShrink: 0 }} />
-            <span>{errorMsg}</span>
-          </div>
-        )}
-
-        {/* CLIENT TAB: Gmail Google Login */}
-        {activeTab === 'client' && (
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#065f46', padding: '1rem', borderRadius: '12px', fontSize: '0.825rem', marginBottom: '1.5rem', textAlign: 'left' }}>
-              <div style={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.25rem' }}>
-                <CheckCircle2 style={{ width: '16px', height: '16px', color: '#059669' }} />
-                Citizen / Public Access Portal
-              </div>
-              Report municipal civic issues in your district, attach location maps, and track resolution progress with guaranteed deadlines.
-            </div>
-
-            <button
-              type="button"
-              onClick={handleGoogleLogin}
-              disabled={loading}
-              className="btn-google"
-            >
-              <svg style={{ width: '20px', height: '20px' }} viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+      <div className="login-container">
+        <div className="login-card">
+          <div className="login-card__header">
+            <div className="login-card__emblem">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#1B4D8E" strokeWidth="1.5">
+                <path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/>
+                <path d="M9 9h1"/><path d="M9 13h1"/><path d="M9 17h1"/>
               </svg>
-              {loading ? "Authenticating with Google..." : "Login with Gmail Account"}
-            </button>
+            </div>
+            <h1>UP Municipal Civic Desk</h1>
+            <p>Government of Uttar Pradesh</p>
           </div>
-        )}
 
-        {/* ADMIN / WORKER TAB */}
-        {activeTab === 'admin_worker' && (
-          <form onSubmit={handleCredentialsLogin}>
-            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e40af', padding: '0.85rem', borderRadius: '12px', fontSize: '0.825rem', marginBottom: '1.25rem' }}>
-              <div style={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
-                <Building2 style={{ width: '16px', height: '16px' }} />
-                District Magistrate & Field Officers Portal
-              </div>
-              Authorized accounts are generated by District Administration. Self-registration is restricted.
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">User ID / Official Email</label>
-              <input
-                type="text"
-                className="form-control"
-                placeholder="e.g. lucknow_visak1 or ramesh3210"
-                value={loginId}
-                onChange={(e) => setLoginId(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Password</label>
-              <input
-                type="password"
-                className="form-control"
-                placeholder="Enter password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-
-            <button type="submit" disabled={loading} className="btn-primary" style={{ marginTop: '0.5rem' }}>
-              <LogIn style={{ width: '18px', height: '18px' }} />
-              {loading ? "Authenticating..." : "Login to Official Panel"}
-            </button>
-
-            <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>
-                Quick Demo Accounts:
-              </span>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                <button
-                  type="button"
-                  onClick={() => fillDemo("lucknow_visak1", "Welcome@54321")}
-                  style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', padding: '0.35rem 0.6rem', borderRadius: '6px', fontSize: '0.75rem', fontFamily: 'monospace', fontWeight: 600, cursor: 'pointer' }}
-                >
-                  DM Lucknow (lucknow_visak1)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => fillDemo("ramesh3210", "9876543210")}
-                  style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', padding: '0.35rem 0.6rem', borderRadius: '6px', fontSize: '0.75rem', fontFamily: 'monospace', fontWeight: 600, cursor: 'pointer' }}
-                >
-                  Worker Lucknow (ramesh3210)
-                </button>
-              </div>
-            </div>
-          </form>
-        )}
-
-        {/* MASTER TAB */}
-        {activeTab === 'master' && (
-          <form onSubmit={handleCredentialsLogin}>
-            <div style={{ background: '#faf5ff', border: '1px solid #e9d5ff', color: '#6b21a8', padding: '0.85rem', borderRadius: '12px', fontSize: '0.825rem', marginBottom: '1.25rem' }}>
-              <div style={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
-                <ShieldAlert style={{ width: '16px', height: '16px' }} />
-                State Master Control Panel
-              </div>
-              Restricted state administrator panel to manage districts, DMs, workers, site settings, and issue oversight.
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Master User ID</label>
-              <input
-                type="text"
-                className="form-control"
-                style={{ fontFamily: 'monospace', fontWeight: 'bold' }}
-                placeholder="UP_MCD"
-                value={loginId}
-                onChange={(e) => setLoginId(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Master Password</label>
-              <input
-                type="password"
-                className="form-control"
-                style={{ fontFamily: 'monospace' }}
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary"
-              style={{ background: 'linear-gradient(135deg, #6b21a8 0%, #3b82f6 100%)', marginTop: '0.5rem' }}
-            >
-              <ShieldAlert style={{ width: '18px', height: '18px' }} />
-              {loading ? "Authenticating Master..." : "Login Master Panel"}
-            </button>
-
-            <div style={{ textAlign: 'center', marginTop: '0.75rem' }}>
+          <div className="login-tabs">
+            {tabs.map(tab => (
               <button
-                type="button"
-                onClick={() => fillDemo("UP_MCD", "12345678")}
-                style={{ background: 'none', border: 'none', color: '#6b21a8', fontSize: '0.8rem', fontFamily: 'monospace', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
+                key={tab.id}
+                className={`login-tab ${activeTab === tab.id ? 'login-tab--active' : ''}`}
+                onClick={() => { setActiveTab(tab.id); setError(''); setUserId(''); setPassword(''); }}
               >
-                Auto-fill Master Credentials (UP_MCD / 12345678)
+                {tab.icon}
+                <span>{tab.label}</span>
               </button>
-            </div>
-          </form>
-        )}
+            ))}
+          </div>
+
+          <div className="login-form">
+            {activeTab === 'client' ? (
+              <div className="login-form__google">
+                <p className="login-form__info">Sign in with your Google account to file and track civic complaints in your district.</p>
+                <button className="btn btn--google" onClick={handleGoogleLogin} disabled={loading}>
+                  <svg width="20" height="20" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  </svg>
+                  {loading ? 'Signing in...' : 'Sign in with Google'}
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="form-group">
+                  <label htmlFor="login-userid">User ID</label>
+                  <div className="input-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    <input
+                      id="login-userid"
+                      type="text"
+                      className="input"
+                      placeholder="Enter your User ID"
+                      value={userId}
+                      onChange={e => setUserId(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="login-password">Password</label>
+                  <div className="input-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                    <input
+                      id="login-password"
+                      type="password"
+                      className="input"
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleCredentialLogin(activeTab)}
+                    />
+                  </div>
+                </div>
+                <button
+                  className="btn btn--primary btn--full"
+                  onClick={() => handleCredentialLogin(activeTab)}
+                  disabled={loading}
+                >
+                  {loading ? 'Signing in...' : 'Sign In'}
+                </button>
+              </>
+            )}
+
+            {error && (
+              <div className="login-error">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+                </svg>
+                {error}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <p className="login-footer">
+          &copy; {new Date().getFullYear()} UP Municipal Civic Desk. All rights reserved.
+        </p>
       </div>
     </div>
   );
-};
+}
