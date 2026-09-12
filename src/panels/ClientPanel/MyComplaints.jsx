@@ -17,7 +17,7 @@ export default function MyComplaints() {
   const [thread, setThread] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Decline form
+  // Decline form state
   const [showDecline, setShowDecline] = useState(false);
   const [declineRemark, setDeclineRemark] = useState('');
   const [declinePhoto, setDeclinePhoto] = useState('');
@@ -27,7 +27,6 @@ export default function MyComplaints() {
 
   const loadComplaints = async () => {
     const c = await getComplaints({ clientId: userData.id });
-    // Auto-resolve check
     for (const complaint of c) {
       if (complaint.status === 'finalized_by_worker' && shouldAutoResolve(complaint.workerFinalizedAt)) {
         await autoResolve(complaint.id, complaint.districtId);
@@ -73,80 +72,165 @@ export default function MyComplaints() {
 
     return (
       <div className="panel-section">
-        <button className="btn btn--ghost" onClick={() => setSelected(null)}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12,19 5,12 12,5"/></svg>
-          Back
-        </button>
-        <div className="complaint-detail">
-          <div className="complaint-detail__header">
-            <h2>{selected.complaintNumber}</h2>
+        {/* Top Header Bar */}
+        <div className="dashboard__topbar">
+          <button className="btn btn--outline btn--sm" onClick={() => setSelected(null)}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12,19 5,12 12,5"/></svg>
+            &larr; Back to Complaints
+          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 600 }}>ID: {selected.complaintNumber}</span>
             <StatusBadge status={selected.status} />
           </div>
-          <div className="complaint-detail__grid">
-            <div><strong>Type:</strong> {selected.type}</div>
-            <div><strong>Filed:</strong> {formatDateTime(selected.createdAt)}</div>
-            <div><strong>Address:</strong> {selected.address}</div>
-            <div><strong>District:</strong> {selected.districtId?.replace(/_/g, ' ')}</div>
-          </div>
-          <p className="complaint-detail__desc">{selected.description}</p>
-          {selected.photos?.length > 0 && (
-            <div className="complaint-detail__photos">
-              {selected.photos.map((p, i) => <a key={i} href={p} target="_blank" rel="noreferrer"><img src={p} alt="" /></a>)}
-            </div>
-          )}
+        </div>
 
-          {selected.assignedWorkerName && (
-            <div className="worker-info-card">
-              <h4>Assigned Worker</h4>
-              <p><strong>{selected.assignedWorkerName}</strong></p>
-              <a href={`tel:${selected.assignedWorkerPhone}`}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/>
-                </svg>
-                {selected.assignedWorkerPhone}
-              </a>
-            </div>
-          )}
-
-          {/* Resolution buttons */}
-          {isFinalized && (
-            <div className="resolution-actions">
-              <h3>Worker has finalized the work. Is the issue resolved?</h3>
-              {selected.workerRemark && <p className="worker-remark"><strong>Worker's Remark:</strong> {selected.workerRemark}</p>}
-              {selected.workerPhotos?.length > 0 && (
-                <div className="complaint-detail__photos">
-                  {selected.workerPhotos.map((p, i) => <a key={i} href={p} target="_blank" rel="noreferrer"><img src={p} alt="" /></a>)}
+        {/* 2-Column Productive CRM Grid */}
+        <div className="complaint-layout-grid">
+          {/* Main Left Area */}
+          <div className="complaint-main-panel">
+            <div className="detail-card">
+              <div className="detail-card__header">
+                <div className="detail-card__title">
+                  <h2>{selected.complaintNumber}</h2>
+                  <p>{selected.type}</p>
                 </div>
-              )}
-              <div className="resolution-buttons">
-                <button className="btn btn--success btn--lg" onClick={handleResolve} disabled={processing}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20,6 9,17 4,12"/></svg>
-                  Complaint Resolved
-                </button>
-                <button className="btn btn--danger btn--lg" onClick={() => setShowDecline(true)} disabled={processing}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  Not Resolved
-                </button>
+                <StatusBadge status={selected.status} />
               </div>
 
-              {showDecline && (
-                <div className="action-card" style={{ marginTop: '1rem', borderLeft: '4px solid #DC2626' }}>
-                  <h4>Why is the issue not resolved?</h4>
-                  <div className="form-group">
-                    <label>Your Remark</label>
-                    <textarea className="input textarea" value={declineRemark} onChange={e => setDeclineRemark(e.target.value)} rows={3} placeholder="Explain why the issue persists..." />
+              {/* Metadata Grid */}
+              <div className="detail-meta-grid">
+                <div className="detail-meta-item">
+                  <label>Category</label>
+                  <span>{selected.type}</span>
+                </div>
+                <div className="detail-meta-item">
+                  <label>Date Filed</label>
+                  <span>{formatDateTime(selected.createdAt)}</span>
+                </div>
+                <div className="detail-meta-item">
+                  <label>District</label>
+                  <span>{selected.districtId?.replace(/_/g, ' ').toUpperCase()}</span>
+                </div>
+                <div className="detail-meta-item">
+                  <label>Address / Location</label>
+                  <span>{selected.address || 'Location provided'}</span>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="detail-description">
+                <h4>Issue Details & Description</h4>
+                <div className="detail-description-box">
+                  {selected.description}
+                </div>
+              </div>
+
+              {/* Attached Photos */}
+              {selected.photos?.length > 0 && (
+                <div className="detail-photos-gallery">
+                  <h4>Attached Evidence Photos ({selected.photos.length})</h4>
+                  <div className="photos-grid">
+                    {selected.photos.map((p, i) => (
+                      <a key={i} href={p} target="_blank" rel="noreferrer">
+                        <img src={p} alt={`Evidence ${i+1}`} className="photo-thumb" />
+                      </a>
+                    ))}
                   </div>
-                  <ImageUploader onUpload={(urls) => setDeclinePhoto(urls[0] || '')} multiple={false} label="Upload a current photo of the place" />
-                  <button className="btn btn--danger" onClick={handleDecline} disabled={processing} style={{ marginTop: '1rem' }}>
-                    {processing ? 'Submitting...' : 'Submit Decline'}
-                  </button>
                 </div>
               )}
             </div>
-          )}
 
-          <h3>Activity Timeline</h3>
-          <ChatThread thread={thread} />
+            {/* Conversation & Activity Log */}
+            <div className="detail-card">
+              <div className="dashboard-section__header">
+                <h3>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                  </svg>
+                  Activity & Communication Timeline
+                </h3>
+              </div>
+              <ChatThread thread={thread} />
+            </div>
+          </div>
+
+          {/* Right Sidebar Area */}
+          <div className="complaint-sidebar-panel">
+            {/* Worker Info Card */}
+            {selected.assignedWorkerName ? (
+              <div className="sidebar-card">
+                <h4>Assigned Municipal Worker</h4>
+                <div className="worker-sidebar-info">
+                  <div className="worker-sidebar-name">{selected.assignedWorkerName}</div>
+                  {selected.assignedWorkerPhone && (
+                    <a href={`tel:${selected.assignedWorkerPhone}`} className="btn btn--outline btn--sm btn--full" style={{ marginTop: '0.5rem' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/>
+                      </svg>
+                      Call {selected.assignedWorkerPhone}
+                    </a>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="sidebar-card">
+                <h4>Assignment Status</h4>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Awaiting worker assignment by district administration.</p>
+              </div>
+            )}
+
+            {/* Finalization / Resolution Actions Card */}
+            {isFinalized && (
+              <div className="resolution-sidebar-box">
+                <h4>Worker Finalized Resolution</h4>
+                <p style={{ fontSize: '0.82rem', color: '#78350F' }}>The assigned worker has completed work. Please verify and confirm resolution.</p>
+
+                {selected.workerRemark && (
+                  <div style={{ background: '#FFFFFF', padding: '10px', borderRadius: '4px', border: '1px solid #FDE68A', fontSize: '0.85rem' }}>
+                    <strong>Worker's Note:</strong> {selected.workerRemark}
+                  </div>
+                )}
+
+                {selected.workerPhotos?.length > 0 && (
+                  <div className="detail-photos-gallery">
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#92400E' }}>Completion Photos:</span>
+                    <div className="photos-grid">
+                      {selected.workerPhotos.map((p, i) => (
+                        <a key={i} href={p} target="_blank" rel="noreferrer">
+                          <img src={p} alt={`Resolved Work ${i+1}`} className="photo-thumb" style={{ width: '70px', height: '70px' }} />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <button className="btn btn--success btn--full" onClick={handleResolve} disabled={processing}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20,6 9,17 4,12"/></svg>
+                    Confirm Issue Resolved
+                  </button>
+                  <button className="btn btn--danger btn--full" onClick={() => setShowDecline(!showDecline)} disabled={processing}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    Issue Not Resolved
+                  </button>
+                </div>
+
+                {showDecline && (
+                  <div style={{ marginTop: '0.75rem', background: '#FFFFFF', padding: '1rem', borderRadius: '6px', border: '1px solid #FECACA' }}>
+                    <h5 style={{ fontSize: '0.85rem', color: '#B91C1C', marginBottom: '0.5rem' }}>Specify Persistent Issue</h5>
+                    <div className="form-group">
+                      <label>Remarks</label>
+                      <textarea className="input textarea" value={declineRemark} onChange={e => setDeclineRemark(e.target.value)} rows={3} placeholder="Describe what remains incomplete..." />
+                    </div>
+                    <ImageUploader onUpload={(urls) => setDeclinePhoto(urls[0] || '')} multiple={false} label="Upload Current Photo" />
+                    <button className="btn btn--danger btn--full" onClick={handleDecline} disabled={processing} style={{ marginTop: '0.75rem' }}>
+                      {processing ? 'Submitting...' : 'Submit Decline Notification'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -154,7 +238,10 @@ export default function MyComplaints() {
 
   return (
     <div className="panel-section">
-      <div className="panel-section__header"><h2>My Complaints</h2></div>
+      <div className="panel-section__header">
+        <h2>My Filed Complaints</h2>
+        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Total: <strong>{complaints.length}</strong></div>
+      </div>
       {loading ? (
         <div className="loading-skeleton">{[1,2,3].map(i => <div key={i} className="skeleton-card" />)}</div>
       ) : complaints.length === 0 ? (
