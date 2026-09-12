@@ -17,16 +17,18 @@ export default function MyComplaints() {
   const [thread, setThread] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Decline form state
+  // Decline form
   const [showDecline, setShowDecline] = useState(false);
   const [declineRemark, setDeclineRemark] = useState('');
   const [declinePhoto, setDeclinePhoto] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
 
   useEffect(() => { if (userData) loadComplaints(); }, [userData]);
 
   const loadComplaints = async () => {
     const c = await getComplaints({ clientId: userData.id });
+    // Auto-resolve check
     for (const complaint of c) {
       if (complaint.status === 'finalized_by_worker' && shouldAutoResolve(complaint.workerFinalizedAt)) {
         await autoResolve(complaint.id, complaint.districtId);
@@ -72,164 +74,189 @@ export default function MyComplaints() {
 
     return (
       <div className="panel-section">
-        {/* Top Header Bar */}
-        <div className="dashboard__topbar">
-          <button className="btn btn--outline btn--sm" onClick={() => setSelected(null)}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12,19 5,12 12,5"/></svg>
-            &larr; Back to Complaints
-          </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 600 }}>ID: {selected.complaintNumber}</span>
-            <StatusBadge status={selected.status} />
+        {/* Lightbox Modal */}
+        {previewImage && (
+          <div className="lightbox-modal" onClick={() => setPreviewImage(null)}>
+            <button className="lightbox-modal__close" onClick={() => setPreviewImage(null)}>&times;</button>
+            <img src={previewImage} alt="Enlarged view" onClick={e => e.stopPropagation()} />
           </div>
-        </div>
+        )}
 
-        {/* 2-Column Productive CRM Grid */}
-        <div className="complaint-layout-grid">
-          {/* Main Left Area */}
-          <div className="complaint-main-panel">
-            <div className="detail-card">
-              <div className="detail-card__header">
-                <div className="detail-card__title">
-                  <h2>{selected.complaintNumber}</h2>
-                  <p>{selected.type}</p>
+        <button className="btn btn--ghost" onClick={() => setSelected(null)}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12,19 5,12 12,5"/></svg>
+          Back to Complaints
+        </button>
+
+        <div className="complaint-detail">
+          {/* Topbar Header */}
+          <div className="complaint-detail__topbar">
+            <div className="complaint-detail__code-wrap">
+              <span className="complaint-detail__code">{selected.complaintNumber}</span>
+              <StatusBadge status={selected.status} />
+            </div>
+            <span className="form-hint">Ref ID: {selected.id}</span>
+          </div>
+
+          {/* 4-Column Metric Info Grid */}
+          <div className="complaint-detail__info-grid">
+            <div className="info-chip">
+              <div className="info-chip__icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
+                </svg>
+              </div>
+              <div className="info-chip__text">
+                <span className="info-chip__label">Category</span>
+                <span className="info-chip__value">{selected.type}</span>
+              </div>
+            </div>
+
+            <div className="info-chip">
+              <div className="info-chip__icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+              </div>
+              <div className="info-chip__text">
+                <span className="info-chip__label">Date Filed</span>
+                <span className="info-chip__value">{formatDateTime(selected.createdAt)}</span>
+              </div>
+            </div>
+
+            <div className="info-chip">
+              <div className="info-chip__icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                </svg>
+              </div>
+              <div className="info-chip__text">
+                <span className="info-chip__label">Location Address</span>
+                <span className="info-chip__value" title={selected.address}>{selected.address}</span>
+              </div>
+            </div>
+
+            <div className="info-chip">
+              <div className="info-chip__icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/>
+                </svg>
+              </div>
+              <div className="info-chip__text">
+                <span className="info-chip__label">District</span>
+                <span className="info-chip__value" style={{ textTransform: 'capitalize' }}>{selected.districtId?.replace(/_/g, ' ')}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Problem Statement Block */}
+          <div className="complaint-detail__desc-box">
+            <div className="complaint-detail__desc-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/>
+              </svg>
+              Problem Description
+            </div>
+            <p className="complaint-detail__desc-text">{selected.description}</p>
+          </div>
+
+          {/* Citizen Uploaded Photos */}
+          {selected.photos?.length > 0 && (
+            <div className="complaint-detail__media-section">
+              <span className="complaint-detail__media-title">Attached Photos ({selected.photos.length})</span>
+              <div className="complaint-detail__photos">
+                {selected.photos.map((p, i) => (
+                  <div key={i} className="complaint-detail__photo-thumb" onClick={() => setPreviewImage(p)}>
+                    <img src={p} alt={`Attached ${i + 1}`} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Assigned Worker Profile Card */}
+          {selected.assignedWorkerName && (
+            <div className="worker-card">
+              <div className="worker-card__info">
+                <div className="worker-card__avatar">
+                  {selected.assignedWorkerName.charAt(0).toUpperCase()}
                 </div>
-                <StatusBadge status={selected.status} />
+                <div className="worker-card__details">
+                  <h4>Assigned Municipal Worker</h4>
+                  <p>{selected.assignedWorkerName}</p>
+                </div>
               </div>
 
-              {/* Metadata Grid */}
-              <div className="detail-meta-grid">
-                <div className="detail-meta-item">
-                  <label>Category</label>
-                  <span>{selected.type}</span>
-                </div>
-                <div className="detail-meta-item">
-                  <label>Date Filed</label>
-                  <span>{formatDateTime(selected.createdAt)}</span>
-                </div>
-                <div className="detail-meta-item">
-                  <label>District</label>
-                  <span>{selected.districtId?.replace(/_/g, ' ').toUpperCase()}</span>
-                </div>
-                <div className="detail-meta-item">
-                  <label>Address / Location</label>
-                  <span>{selected.address || 'Location provided'}</span>
-                </div>
+              {selected.assignedWorkerPhone && (
+                <a className="worker-card__call-btn" href={`tel:${selected.assignedWorkerPhone}`}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/>
+                  </svg>
+                  Call {selected.assignedWorkerPhone}
+                </a>
+              )}
+            </div>
+          )}
+
+          {/* Resolution Finalization Card */}
+          {isFinalized && (
+            <div className="resolution-hero">
+              <div className="resolution-hero__header">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/>
+                </svg>
+                <h3>Worker has completed the work. Is the issue resolved?</h3>
               </div>
 
-              {/* Description */}
-              <div className="detail-description">
-                <h4>Issue Details & Description</h4>
-                <div className="detail-description-box">
-                  {selected.description}
+              {selected.workerRemark && (
+                <div className="resolution-hero__remark">
+                  <p><strong>Worker's Remark:</strong> {selected.workerRemark}</p>
                 </div>
-              </div>
+              )}
 
-              {/* Attached Photos */}
-              {selected.photos?.length > 0 && (
-                <div className="detail-photos-gallery">
-                  <h4>Attached Evidence Photos ({selected.photos.length})</h4>
-                  <div className="photos-grid">
-                    {selected.photos.map((p, i) => (
-                      <a key={i} href={p} target="_blank" rel="noreferrer">
-                        <img src={p} alt={`Evidence ${i+1}`} className="photo-thumb" />
-                      </a>
+              {selected.workerPhotos?.length > 0 && (
+                <div className="complaint-detail__media-section">
+                  <span className="complaint-detail__media-title">Worker Completion Photos ({selected.workerPhotos.length})</span>
+                  <div className="complaint-detail__photos">
+                    {selected.workerPhotos.map((p, i) => (
+                      <div key={i} className="complaint-detail__photo-thumb" onClick={() => setPreviewImage(p)}>
+                        <img src={p} alt={`Proof ${i + 1}`} />
+                      </div>
                     ))}
                   </div>
                 </div>
               )}
-            </div>
 
-            {/* Conversation & Activity Log */}
-            <div className="detail-card">
-              <div className="dashboard-section__header">
-                <h3>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                  </svg>
-                  Activity & Communication Timeline
-                </h3>
+              <div className="resolution-hero__actions">
+                <button className="btn btn--success btn--lg" onClick={handleResolve} disabled={processing}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20,6 9,17 4,12"/></svg>
+                  Confirm & Mark Resolved
+                </button>
+                <button className="btn btn--danger btn--lg" onClick={() => setShowDecline(true)} disabled={processing}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  Decline Resolution
+                </button>
               </div>
-              <ChatThread thread={thread} />
-            </div>
-          </div>
 
-          {/* Right Sidebar Area */}
-          <div className="complaint-sidebar-panel">
-            {/* Worker Info Card */}
-            {selected.assignedWorkerName ? (
-              <div className="sidebar-card">
-                <h4>Assigned Municipal Worker</h4>
-                <div className="worker-sidebar-info">
-                  <div className="worker-sidebar-name">{selected.assignedWorkerName}</div>
-                  {selected.assignedWorkerPhone && (
-                    <a href={`tel:${selected.assignedWorkerPhone}`} className="btn btn--outline btn--sm btn--full" style={{ marginTop: '0.5rem' }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/>
-                      </svg>
-                      Call {selected.assignedWorkerPhone}
-                    </a>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="sidebar-card">
-                <h4>Assignment Status</h4>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Awaiting worker assignment by district administration.</p>
-              </div>
-            )}
-
-            {/* Finalization / Resolution Actions Card */}
-            {isFinalized && (
-              <div className="resolution-sidebar-box">
-                <h4>Worker Finalized Resolution</h4>
-                <p style={{ fontSize: '0.82rem', color: '#78350F' }}>The assigned worker has completed work. Please verify and confirm resolution.</p>
-
-                {selected.workerRemark && (
-                  <div style={{ background: '#FFFFFF', padding: '10px', borderRadius: '4px', border: '1px solid #FDE68A', fontSize: '0.85rem' }}>
-                    <strong>Worker's Note:</strong> {selected.workerRemark}
+              {showDecline && (
+                <div className="action-card" style={{ borderLeft: '4px solid var(--danger)', marginTop: '0.5rem' }}>
+                  <h4 style={{ color: 'var(--danger)', marginBottom: '0.75rem' }}>Why is the issue persistent?</h4>
+                  <div className="form-group">
+                    <label>Your Remark</label>
+                    <textarea className="input textarea" value={declineRemark} onChange={e => setDeclineRemark(e.target.value)} rows={3} placeholder="Explain why the issue persists..." />
                   </div>
-                )}
-
-                {selected.workerPhotos?.length > 0 && (
-                  <div className="detail-photos-gallery">
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#92400E' }}>Completion Photos:</span>
-                    <div className="photos-grid">
-                      {selected.workerPhotos.map((p, i) => (
-                        <a key={i} href={p} target="_blank" rel="noreferrer">
-                          <img src={p} alt={`Resolved Work ${i+1}`} className="photo-thumb" style={{ width: '70px', height: '70px' }} />
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
-                  <button className="btn btn--success btn--full" onClick={handleResolve} disabled={processing}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20,6 9,17 4,12"/></svg>
-                    Confirm Issue Resolved
-                  </button>
-                  <button className="btn btn--danger btn--full" onClick={() => setShowDecline(!showDecline)} disabled={processing}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    Issue Not Resolved
+                  <ImageUploader onUpload={(urls) => setDeclinePhoto(urls[0] || '')} multiple={false} label="Upload current photo proof" />
+                  <button className="btn btn--danger" onClick={handleDecline} disabled={processing} style={{ marginTop: '1rem' }}>
+                    {processing ? 'Submitting...' : 'Submit Decline'}
                   </button>
                 </div>
+              )}
+            </div>
+          )}
 
-                {showDecline && (
-                  <div style={{ marginTop: '0.75rem', background: '#FFFFFF', padding: '1rem', borderRadius: '6px', border: '1px solid #FECACA' }}>
-                    <h5 style={{ fontSize: '0.85rem', color: '#B91C1C', marginBottom: '0.5rem' }}>Specify Persistent Issue</h5>
-                    <div className="form-group">
-                      <label>Remarks</label>
-                      <textarea className="input textarea" value={declineRemark} onChange={e => setDeclineRemark(e.target.value)} rows={3} placeholder="Describe what remains incomplete..." />
-                    </div>
-                    <ImageUploader onUpload={(urls) => setDeclinePhoto(urls[0] || '')} multiple={false} label="Upload Current Photo" />
-                    <button className="btn btn--danger btn--full" onClick={handleDecline} disabled={processing} style={{ marginTop: '0.75rem' }}>
-                      {processing ? 'Submitting...' : 'Submit Decline Notification'}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
+          {/* Activity Timeline */}
+          <div style={{ marginTop: '0.5rem' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: '800', marginBottom: '0.5rem' }}>Activity Timeline</h3>
+            <ChatThread thread={thread} />
           </div>
         </div>
       </div>
@@ -238,10 +265,7 @@ export default function MyComplaints() {
 
   return (
     <div className="panel-section">
-      <div className="panel-section__header">
-        <h2>My Filed Complaints</h2>
-        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Total: <strong>{complaints.length}</strong></div>
-      </div>
+      <div className="panel-section__header"><h2>My Complaints</h2></div>
       {loading ? (
         <div className="loading-skeleton">{[1,2,3].map(i => <div key={i} className="skeleton-card" />)}</div>
       ) : complaints.length === 0 ? (

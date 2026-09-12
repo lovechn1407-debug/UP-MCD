@@ -49,7 +49,7 @@ export default function LeaderboardPanel() {
           </svg>
           Honor Score Leaderboard
         </h2>
-        <div className="search-box">
+        <div className="leaderboard__search">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
@@ -86,9 +86,13 @@ export default function LeaderboardPanel() {
                 return (
                   <tr key={d.id} className={medal ? 'leaderboard__medal-row' : ''}>
                     <td>
-                      <span className="leaderboard__rank-badge" style={medal ? { background: medal.bg, color: medal.color, border: 'none' } : { background: 'var(--bg-sidebar)', color: 'var(--text-secondary)' }}>
-                        {i + 1}
-                      </span>
+                      {medal ? (
+                        <span className="leaderboard__medal" style={{ background: medal.bg, color: medal.color }}>
+                          {i + 1}
+                        </span>
+                      ) : (
+                        <span className="leaderboard__rank">{i + 1}</span>
+                      )}
                     </td>
                     <td>
                       <div className="leaderboard__district">

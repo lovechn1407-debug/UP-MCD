@@ -34,99 +34,31 @@ export default function ViewComplaints() {
   if (selected) {
     return (
       <div className="panel-section">
-        <div className="dashboard__topbar">
-          <button className="btn btn--outline btn--sm" onClick={() => setSelected(null)}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12,19 5,12 12,5"/></svg>
-            &larr; Back to Complaints List
-          </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 600 }}>ID: {selected.complaintNumber}</span>
+        <button className="btn btn--ghost" onClick={() => setSelected(null)}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12,19 5,12 12,5"/></svg>
+          Back to list
+        </button>
+        <div className="complaint-detail">
+          <div className="complaint-detail__header">
+            <h2>{selected.complaintNumber}</h2>
             <StatusBadge status={selected.status} />
           </div>
-        </div>
-
-        <div className="complaint-layout-grid">
-          <div className="complaint-main-panel">
-            <div className="detail-card">
-              <div className="detail-card__header">
-                <div className="detail-card__title">
-                  <h2>{selected.complaintNumber}</h2>
-                  <p>{selected.type}</p>
-                </div>
-                <StatusBadge status={selected.status} />
-              </div>
-
-              <div className="detail-meta-grid">
-                <div className="detail-meta-item">
-                  <label>Type / Category</label>
-                  <span>{selected.type}</span>
-                </div>
-                <div className="detail-meta-item">
-                  <label>Complainant Name</label>
-                  <span>{selected.clientName || 'Citizen'}</span>
-                </div>
-                <div className="detail-meta-item">
-                  <label>District</label>
-                  <span>{selected.districtId?.replace(/_/g, ' ').toUpperCase()}</span>
-                </div>
-                <div className="detail-meta-item">
-                  <label>Date Filed</label>
-                  <span>{formatDateTime(selected.createdAt)}</span>
-                </div>
-                <div className="detail-meta-item">
-                  <label>Contact Phone</label>
-                  <span>{selected.mobileNumber || selected.clientPhone || 'N/A'}</span>
-                </div>
-                <div className="detail-meta-item">
-                  <label>Address</label>
-                  <span>{selected.address || 'N/A'}</span>
-                </div>
-              </div>
-
-              <div className="detail-description">
-                <h4>Description</h4>
-                <div className="detail-description-box">{selected.description}</div>
-              </div>
-
-              {selected.photos?.length > 0 && (
-                <div className="detail-photos-gallery">
-                  <h4>Evidence Photos</h4>
-                  <div className="photos-grid">
-                    {selected.photos.map((p, i) => (
-                      <a key={i} href={p} target="_blank" rel="noreferrer">
-                        <img src={p} alt={`Photo ${i+1}`} className="photo-thumb" />
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="detail-card">
-              <div className="dashboard-section__header">
-                <h3>Activity Log</h3>
-              </div>
-              <ChatThread thread={thread} />
-            </div>
+          <div className="complaint-detail__grid">
+            <div><strong>Type:</strong> {selected.type}</div>
+            <div><strong>Client:</strong> {selected.clientName}</div>
+            <div><strong>District:</strong> {selected.districtId}</div>
+            <div><strong>Filed:</strong> {formatDateTime(selected.createdAt)}</div>
+            <div><strong>Address:</strong> {selected.address}</div>
+            <div><strong>Phone:</strong> {selected.mobileNumber || selected.clientPhone}</div>
           </div>
-
-          <div className="complaint-sidebar-panel">
-            <div className="sidebar-card">
-              <h4>Assigned Worker</h4>
-              {selected.assignedWorkerName ? (
-                <div>
-                  <strong>{selected.assignedWorkerName}</strong>
-                  {selected.assignedWorkerPhone && (
-                    <div style={{ marginTop: '0.25rem', fontSize: '0.85rem', color: 'var(--primary)' }}>
-                      Phone: {selected.assignedWorkerPhone}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No worker assigned yet.</span>
-              )}
+          <p className="complaint-detail__desc">{selected.description}</p>
+          {selected.photos?.length > 0 && (
+            <div className="complaint-detail__photos">
+              {selected.photos.map((p, i) => <a key={i} href={p} target="_blank" rel="noreferrer"><img src={p} alt={`Photo ${i+1}`} /></a>)}
             </div>
-          </div>
+          )}
+          <h3>Activity Timeline</h3>
+          <ChatThread thread={thread} />
         </div>
       </div>
     );
@@ -135,7 +67,7 @@ export default function ViewComplaints() {
   return (
     <div className="panel-section">
       <div className="panel-section__header">
-        <h2>All System Complaints</h2>
+        <h2>All Complaints</h2>
         <div className="panel-section__filters">
           <div className="search-box">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
