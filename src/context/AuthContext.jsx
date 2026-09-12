@@ -16,55 +16,56 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
+      setCurrentUser(user);
+      if (!user) {
+        setUserData(null);
+        setLoading(false);
+        return;
+      }
+
+      const emailLower = (user.email || '').toLowerCase();
+
+      // Fast-path 1: Master Admin (Instant 0ms resolution)
+      if (emailLower.startsWith('up_mcd')) {
+        const masterObj = {
+          uid: user.uid,
+          role: 'master',
+          userId: 'UP_MCD',
+          name: 'Master Admin',
+          email: user.email,
+          address: 'Lucknow, UP'
+        };
+        setUserData(masterObj);
+        setLoading(false);
+        createUser(user.uid, masterObj).catch(() => {});
+        return;
+      }
+
+      // Fast-path 2: Google Sign-in Client (Instant 0ms resolution)
+      if (user.providerData && user.providerData.some(p => p.providerId === 'google.com')) {
+        const clientObj = {
+          uid: user.uid,
+          role: 'client',
+          userId: user.email,
+          name: user.displayName || 'Citizen',
+          email: user.email,
+          profilePic: user.photoURL || ''
+        };
+        setUserData(clientObj);
+        setLoading(false);
+        createUser(user.uid, clientObj).catch(() => {});
+        return;
+      }
+
+      // For Admin or Worker, query Firestore doc
       try {
-        setCurrentUser(user);
-        if (user) {
-          // 1. Try to get user data from Firestore by UID
-          let data = await getUser(user.uid);
-
-          if (!data && user.email) {
-            // 2. Try to find by email
-            data = await findUserByEmail(user.email);
-          }
-
-          if (!data && user.email) {
-            const emailLower = user.email.toLowerCase();
-            // 3. Fallback for Master Admin email
-            if (emailLower.startsWith('up_mcd')) {
-              data = {
-                uid: user.uid,
-                role: 'master',
-                userId: 'UP_MCD',
-                name: 'Master Admin',
-                email: user.email,
-                address: 'Lucknow, UP'
-              };
-              await createUser(user.uid, data).catch(() => {});
-            } else if (user.providerData.some(p => p.providerId === 'google.com')) {
-              // 4. Google Sign-In Citizen Client
-              data = {
-                uid: user.uid,
-                role: 'client',
-                userId: user.email,
-                name: user.displayName || 'Citizen',
-                email: user.email,
-                phone: '',
-                address: '',
-                profilePic: user.photoURL || '',
-                districtId: '',
-                divisionId: '',
-                adminId: ''
-              };
-              await createUser(user.uid, data).catch(() => {});
-            }
-          }
-
-          setUserData(data);
-        } else {
-          setUserData(null);
+        let data = await getUser(user.uid);
+        if (!data && user.email) {
+          data = await findUserByEmail(user.email);
         }
+        setUserData(data);
       } catch (err) {
-        console.warn('AuthContext listener error:', err);
+        console.warn('AuthContext user fetch error:', err);
       } finally {
         setLoading(false);
       }
@@ -75,7 +76,7 @@ export function AuthProvider({ children }) {
   const refreshUserData = async () => {
     if (currentUser) {
       const data = await getUser(currentUser.uid);
-      setUserData(data);
+      if (data) setUserData(data);
     }
   };
 
