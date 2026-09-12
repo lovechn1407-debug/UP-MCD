@@ -2,7 +2,7 @@ import { db } from '../firebase/config';
 import {
   collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc,
   query, where, serverTimestamp, Timestamp,
-  onSnapshot, increment, writeBatch
+  onSnapshot, increment, writeBatch, getCountFromServer
 } from 'firebase/firestore';
 
 // Helper to safely sort array by date desc
@@ -280,6 +280,50 @@ export async function getComplaints(filters = {}) {
   } catch (err) {
     console.warn('Firestore getComplaints error:', err);
     return [];
+  }
+}
+
+export async function getDashboardStats() {
+  try {
+    const [
+      districtsSnap,
+      adminsSnap,
+      workersSnap,
+      clientsSnap,
+      totalComplaintsSnap,
+      resolvedSnap,
+      pending1Snap,
+      pending2Snap,
+      inProg1Snap,
+      inProg2Snap,
+      inProg3Snap
+    ] = await Promise.all([
+      getCountFromServer(collection(db, 'districts')),
+      getCountFromServer(query(collection(db, 'users'), where('role', '==', 'admin'))),
+      getCountFromServer(query(collection(db, 'users'), where('role', '==', 'worker'))),
+      getCountFromServer(query(collection(db, 'users'), where('role', '==', 'client'))),
+      getCountFromServer(collection(db, 'complaints')),
+      getCountFromServer(query(collection(db, 'complaints'), where('status', '==', 'resolved'))),
+      getCountFromServer(query(collection(db, 'complaints'), where('status', '==', 'new'))),
+      getCountFromServer(query(collection(db, 'complaints'), where('status', '==', 'admin_replied'))),
+      getCountFromServer(query(collection(db, 'complaints'), where('status', '==', 'worker_assigned'))),
+      getCountFromServer(query(collection(db, 'complaints'), where('status', '==', 'in_progress'))),
+      getCountFromServer(query(collection(db, 'complaints'), where('status', '==', 'finalized_by_worker')))
+    ]);
+
+    return {
+      districts: districtsSnap.data().count,
+      admins: adminsSnap.data().count,
+      workers: workersSnap.data().count,
+      clients: clientsSnap.data().count,
+      complaints: totalComplaintsSnap.data().count,
+      resolved: resolvedSnap.data().count,
+      pending: pending1Snap.data().count + pending2Snap.data().count,
+      inProgress: inProg1Snap.data().count + inProg2Snap.data().count + inProg3Snap.data().count
+    };
+  } catch (err) {
+    console.error('Firestore getDashboardStats error:', err);
+    return { districts: 0, admins: 0, workers: 0, clients: 0, complaints: 0, resolved: 0, pending: 0, inProgress: 0 };
   }
 }
 

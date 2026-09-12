@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getUsersByRole, getDistricts, getComplaints } from '../../services/firestore';
+import { getDashboardStats } from '../../services/firestore';
 
 export default function MasterDashboard({ onNavigate }) {
   const [stats, setStats] = useState({ districts: 0, admins: 0, workers: 0, clients: 0, complaints: 0, resolved: 0, pending: 0, inProgress: 0 });
@@ -11,20 +11,8 @@ export default function MasterDashboard({ onNavigate }) {
 
   const loadStats = async () => {
     try {
-      const [districts, admins, workers, clients, complaints] = await Promise.all([
-        getDistricts(), getUsersByRole('admin'), getUsersByRole('worker'),
-        getUsersByRole('client'), getComplaints()
-      ]);
-      setStats({
-        districts: districts.length,
-        admins: admins.length,
-        workers: workers.length,
-        clients: clients.length,
-        complaints: complaints.length,
-        resolved: complaints.filter(c => c.status === 'resolved').length,
-        pending: complaints.filter(c => c.status === 'new' || c.status === 'admin_replied').length,
-        inProgress: complaints.filter(c => ['worker_assigned', 'in_progress', 'finalized_by_worker'].includes(c.status)).length
-      });
+      const data = await getDashboardStats();
+      setStats(data);
     } catch (err) {
       console.error(err);
     }
