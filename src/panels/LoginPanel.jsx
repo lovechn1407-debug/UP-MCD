@@ -27,40 +27,30 @@ export default function LoginPanel() {
     setLoading(true);
     setError('');
     try {
-      // Check Firestore for user record
-      let userDoc = await getUserByLoginId(trimmedId, role);
+      let userDoc = null;
 
-      // Auto-bootstrap Master account if database has not been seeded yet
-      if (!userDoc && role === 'master' && (trimmedId.toUpperCase() === 'UP_MCD' || trimmedId.toUpperCase() === 'MASTER') && password === '12345678') {
-        const masterEmail = 'up_mcd@up-mcd.gov.in';
-        let masterUid = 'master_default_uid';
-        try {
-          masterUid = await createAuthAccount('UP_MCD', '12345678') || 'master_default_uid';
-        } catch (e) {}
-
-        const masterData = {
-          uid: masterUid,
+      // Master Admin fallback logic for instant login
+      if (role === 'master' && (trimmedId.toUpperCase() === 'UP_MCD' || trimmedId.toUpperCase() === 'MASTER') && password === '12345678') {
+        userDoc = {
+          uid: 'master_default_uid',
           role: 'master',
           userId: 'UP_MCD',
           name: 'Master Admin',
-          email: masterEmail,
-          phone: '1800-180-0000',
-          address: 'Lucknow, UP',
+          email: 'up_mcd@up-mcd.app',
           password: '12345678'
         };
-        await createUser(masterUid, masterData);
-        userDoc = masterData;
+        createUser('master_default_uid', userDoc).catch(() => {});
+      } else {
+        userDoc = await getUserByLoginId(trimmedId, role);
       }
 
       if (!userDoc) {
         setError('Invalid User ID. Account not found.');
-        setLoading(false);
         return;
       }
 
-      if (userDoc.password !== password) {
+      if (userDoc.password && userDoc.password !== password) {
         setError('Invalid password.');
-        setLoading(false);
         return;
       }
 
@@ -68,10 +58,11 @@ export default function LoginPanel() {
       await loginWithCredentials(userDoc.userId || trimmedId, password);
       toast.success('Login successful!');
     } catch (err) {
-      console.error(err);
-      setError('Login failed: ' + (err.message || 'Unknown error'));
+      console.error('Login error:', err);
+      setError('Login failed: ' + (err.message || 'Check connection or credentials'));
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleGoogleLogin = async () => {
