@@ -53,7 +53,7 @@ export default function ClientDashboard({ onNavigate }) {
         </div>
       )}
 
-      {/* Top Header Toolbar with Primary Action at Top Right */}
+      {/* Top Header Toolbar */}
       <div className="dashboard__topbar">
         <div className="dashboard__header">
           <h1>Welcome, {userData?.name || 'Citizen'}</h1>
@@ -61,28 +61,31 @@ export default function ClientDashboard({ onNavigate }) {
         </div>
 
         <div className="dashboard__actions">
-          <button className="btn btn--primary btn--lg" onClick={() => onNavigate('newComplaint')}>
+          <button className="btn btn--primary btn--lg btn--full" onClick={() => onNavigate('newComplaint')}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
             File New Complaint
           </button>
-          <button className="btn btn--outline" onClick={() => onNavigate('myComplaints')}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/>
-            </svg>
-            My Complaints
-          </button>
-          <button className="btn btn--outline" onClick={() => onNavigate('leaderboard')}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/><path d="M4 22h16"/>
-            </svg>
-            Leaderboard
-          </button>
+
+          <div className="dashboard__actions-secondary">
+            <button className="btn btn--outline btn--full" onClick={() => onNavigate('myComplaints')}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/>
+              </svg>
+              My Complaints
+            </button>
+            <button className="btn btn--outline btn--full" onClick={() => onNavigate('leaderboard')}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/><path d="M4 22h16"/>
+              </svg>
+              Leaderboard
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* 2-Column Responsive Metric Grid */}
+      {/* 2-Column Responsive Metric Grid (1 top + 2 bottom on mobile) */}
       <div className="stats-grid stats-grid--3">
         <div className="stat-card" style={{ '--card-color': '#1E40AF' }} onClick={() => onNavigate('myComplaints')}>
           <div className="stat-card__icon" style={{ backgroundColor: '#EFF6FF', color: '#1E40AF' }}>
