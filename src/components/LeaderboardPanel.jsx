@@ -30,10 +30,10 @@ export default function LeaderboardPanel() {
     d.representativeName?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const getMedalStyle = (rank) => {
-    if (rank === 0) return { bg: 'linear-gradient(135deg, #FFD700, #FFA500)', color: '#7C4D00' };
-    if (rank === 1) return { bg: 'linear-gradient(135deg, #C0C0C0, #A8A8A8)', color: '#4A4A4A' };
-    if (rank === 2) return { bg: 'linear-gradient(135deg, #CD7F32, #B87333)', color: '#5C3A1E' };
+  const getMedalInfo = (rank) => {
+    if (rank === 0) return { bg: 'linear-gradient(135deg, #FBBF24 0%, #D97706 100%)', color: '#FFFFFF', label: '1 🏆', class: 'leaderboard__medal-row--1' };
+    if (rank === 1) return { bg: 'linear-gradient(135deg, #94A3B8 0%, #475569 100%)', color: '#FFFFFF', label: '2 🥈', class: 'leaderboard__medal-row--2' };
+    if (rank === 2) return { bg: 'linear-gradient(135deg, #F97316 0%, #C2410C 100%)', color: '#FFFFFF', label: '3 🥉', class: 'leaderboard__medal-row--3' };
     return null;
   };
 
@@ -41,7 +41,7 @@ export default function LeaderboardPanel() {
     <div className="leaderboard">
       <div className="leaderboard__header">
         <h2>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2">
             <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
             <path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
             <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
@@ -49,8 +49,8 @@ export default function LeaderboardPanel() {
           </svg>
           Honor Score Leaderboard
         </h2>
-        <div className="leaderboard__search">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <div className="search-box">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
           <input
@@ -82,9 +82,9 @@ export default function LeaderboardPanel() {
             </thead>
             <tbody>
               {filtered.map((d, i) => {
-                const medal = getMedalStyle(i);
+                const medal = getMedalInfo(i);
                 return (
-                  <tr key={d.id} className={medal ? 'leaderboard__medal-row' : ''}>
+                  <tr key={d.id} className={medal ? medal.class : ''}>
                     <td>
                       {medal ? (
                         <span className="leaderboard__medal" style={{ background: medal.bg, color: medal.color }}>
@@ -100,7 +100,7 @@ export default function LeaderboardPanel() {
                         <span>{d.nameHindi}</span>
                       </div>
                     </td>
-                    <td>{d.representativeName}</td>
+                    <td>{d.representativeName || '—'}</td>
                     <td>{d.totalIssues || 0}</td>
                     <td className="text-success">{d.resolvedIssues || 0}</td>
                     <td className="text-warning">{(d.totalIssues || 0) - (d.resolvedIssues || 0)}</td>
@@ -111,7 +111,7 @@ export default function LeaderboardPanel() {
                             className="leaderboard__score-fill"
                             style={{
                               width: `${d.honorScore}%`,
-                              backgroundColor: d.honorScore >= 70 ? '#16A34A' : d.honorScore >= 40 ? '#F59E0B' : '#DC2626'
+                              backgroundColor: d.honorScore >= 70 ? '#10B981' : d.honorScore >= 40 ? '#F59E0B' : '#EF4444'
                             }}
                           />
                         </div>

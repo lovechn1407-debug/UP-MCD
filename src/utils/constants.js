@@ -27,12 +27,12 @@ export const STATUS_LABELS = {
 
 export const STATUS_COLORS = {
   new: '#6366F1',
-  admin_replied: '#2E6BC6',
+  admin_replied: '#2563EB',
   worker_assigned: '#8B5CF6',
   in_progress: '#F59E0B',
   finalized_by_worker: '#06B6D4',
-  resolved: '#16A34A',
-  resolution_declined: '#DC2626'
+  resolved: '#10B981',
+  resolution_declined: '#EF4444'
 };
 
 export const COMPLAINT_TYPES = [
