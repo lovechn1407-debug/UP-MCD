@@ -32,14 +32,12 @@ export default function LoginPanel() {
       // Master Admin fallback logic for instant login
       if (role === 'master' && (trimmedId.toUpperCase() === 'UP_MCD' || trimmedId.toUpperCase() === 'MASTER') && password === '12345678') {
         userDoc = {
-          uid: 'master_default_uid',
           role: 'master',
           userId: 'UP_MCD',
           name: 'Master Admin',
           email: 'up_mcd@up-mcd.app',
           password: '12345678'
         };
-        createUser('master_default_uid', userDoc).catch(() => {});
       } else {
         userDoc = await getUserByLoginId(trimmedId, role);
       }
@@ -55,7 +53,16 @@ export default function LoginPanel() {
       }
 
       // Login via Firebase Auth
-      await loginWithCredentials(userDoc.userId || trimmedId, password);
+      const firebaseUser = await loginWithCredentials(userDoc.userId || trimmedId, password);
+
+      // Save user doc under Firebase UID so AuthContext instantly resolves role
+      if (firebaseUser && firebaseUser.uid) {
+        await createUser(firebaseUser.uid, {
+          ...userDoc,
+          uid: firebaseUser.uid
+        }).catch(() => {});
+      }
+
       toast.success('Login successful!');
     } catch (err) {
       console.error('Login error:', err);
