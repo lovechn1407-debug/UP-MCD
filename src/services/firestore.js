@@ -1,9 +1,27 @@
 import { db } from '../firebase/config';
 import {
   collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc,
-  query, where, orderBy, limit, startAfter, serverTimestamp, Timestamp,
+  query, where, serverTimestamp, Timestamp,
   onSnapshot, increment, writeBatch
 } from 'firebase/firestore';
+
+// Helper to safely sort array by date desc
+function sortByDateDesc(arr, field = 'createdAt') {
+  return [...arr].sort((a, b) => {
+    const tA = a[field]?.seconds || (a[field] ? new Date(a[field]).getTime() / 1000 : 0);
+    const tB = b[field]?.seconds || (b[field] ? new Date(b[field]).getTime() / 1000 : 0);
+    return tB - tA;
+  });
+}
+
+// Helper to safely sort array by date asc
+function sortByDateAsc(arr, field = 'timestamp') {
+  return [...arr].sort((a, b) => {
+    const tA = a[field]?.seconds || (a[field] ? new Date(a[field]).getTime() / 1000 : 0);
+    const tB = b[field]?.seconds || (b[field] ? new Date(b[field]).getTime() / 1000 : 0);
+    return tA - tB;
+  });
+}
 
 // ============ SETTINGS ============
 export async function getSettings() {
@@ -31,7 +49,7 @@ export async function createUser(uid, userData) {
       ...userData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
-    });
+    }, { merge: true });
   } catch (err) {
     console.warn('Firestore createUser error:', err);
   }
@@ -65,9 +83,10 @@ export async function getUserByLoginId(userId, role) {
 
 export async function getUsersByRole(role) {
   try {
-    const q = query(collection(db, 'users'), where('role', '==', role), orderBy('createdAt', 'desc'));
+    const q = query(collection(db, 'users'), where('role', '==', role));
     const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    return sortByDateDesc(docs, 'createdAt');
   } catch (err) {
     console.warn('Firestore getUsersByRole error:', err);
     return [];
@@ -236,38 +255,31 @@ export async function createComplaint(data) {
 export async function getComplaints(filters = {}) {
   try {
     let q = collection(db, 'complaints');
-    const constraints = [orderBy('createdAt', 'desc')];
+    const constraints = [];
 
     if (filters.districtId) {
-      constraints.unshift(where('districtId', '==', filters.districtId));
+      constraints.push(where('districtId', '==', filters.districtId));
     }
     if (filters.clientId) {
-      constraints.unshift(where('clientId', '==', filters.clientId));
+      constraints.push(where('clientId', '==', filters.clientId));
     }
     if (filters.assignedWorkerId) {
-      constraints.unshift(where('assignedWorkerId', '==', filters.assignedWorkerId));
+      constraints.push(where('assignedWorkerId', '==', filters.assignedWorkerId));
     }
     if (filters.status) {
-      constraints.unshift(where('status', '==', filters.status));
+      constraints.push(where('status', '==', filters.status));
     }
 
-    q = query(q, ...constraints);
-    const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  } catch (err) {
-    console.warn('Firestore getComplaints query failed, attempting simple fetch:', err);
-    try {
-      const snap = await getDocs(collection(db, 'complaints'));
-      let docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      if (filters.districtId) docs = docs.filter(d => d.districtId === filters.districtId);
-      if (filters.clientId) docs = docs.filter(d => d.clientId === filters.clientId);
-      if (filters.assignedWorkerId) docs = docs.filter(d => d.assignedWorkerId === filters.assignedWorkerId);
-      if (filters.status) docs = docs.filter(d => d.status === filters.status);
-      return docs;
-    } catch (e) {
-      console.warn('Firestore getComplaints fallback failed:', e);
-      return [];
+    if (constraints.length > 0) {
+      q = query(q, ...constraints);
     }
+    
+    const snap = await getDocs(q);
+    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    return sortByDateDesc(docs, 'createdAt');
+  } catch (err) {
+    console.warn('Firestore getComplaints error:', err);
+    return [];
   }
 }
 
@@ -449,12 +461,10 @@ export async function addThreadEntry(complaintId, data) {
 
 export async function getThread(complaintId) {
   try {
-    const q = query(
-      collection(db, 'complaints', complaintId, 'thread'),
-      orderBy('timestamp', 'asc')
-    );
+    const q = collection(db, 'complaints', complaintId, 'thread');
     const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    return sortByDateAsc(docs, 'timestamp');
   } catch (err) {
     console.warn('Firestore getThread error:', err);
     return [];
@@ -465,21 +475,23 @@ export async function getThread(complaintId) {
 export function onComplaintsSnapshot(filters, callback) {
   try {
     let q = collection(db, 'complaints');
-    const constraints = [orderBy('createdAt', 'desc')];
+    const constraints = [];
 
     if (filters.districtId) {
-      constraints.unshift(where('districtId', '==', filters.districtId));
+      constraints.push(where('districtId', '==', filters.districtId));
     }
     if (filters.clientId) {
-      constraints.unshift(where('clientId', '==', filters.clientId));
+      constraints.push(where('clientId', '==', filters.clientId));
     }
 
-    q = query(q, ...constraints);
+    if (constraints.length > 0) {
+      q = query(q, ...constraints);
+    }
     return onSnapshot(
       q,
       (snap) => {
-        const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        callback(data);
+        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        callback(sortByDateDesc(docs, 'createdAt'));
       },
       (error) => {
         console.warn('Firestore snapshot listener connection offline or interrupted:', error);

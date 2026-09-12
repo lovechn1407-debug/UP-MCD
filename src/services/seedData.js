@@ -4,12 +4,14 @@ import { DIVISIONS_DATA } from '../utils/seedDistricts';
 import { generateAdminId, generateAdminPassword, makeEmailFromId } from '../utils/helpers';
 import { getSettings } from './firestore';
 
-export async function seedDatabase() {
-  // Check if already seeded
-  const settings = await getSettings();
-  if (settings && settings.seeded) {
-    console.log('Database already seeded.');
-    return { success: true, message: 'Already seeded', credentials: [] };
+export async function seedDatabase(force = false) {
+  // Check if already seeded unless forced
+  if (!force) {
+    const settings = await getSettings();
+    if (settings && settings.seeded) {
+      console.log('Database already seeded.');
+      return { success: true, message: 'Already seeded', credentials: [] };
+    }
   }
 
   const credentials = [];

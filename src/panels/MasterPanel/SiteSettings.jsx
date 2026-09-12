@@ -44,7 +44,7 @@ export default function SiteSettings() {
   const handleSeed = async () => {
     if (!confirm('This will seed ALL division, district, and admin data. Continue?')) return;
     setSeeding(true);
-    const result = await seedDatabase();
+    const result = await seedDatabase(true);
     setSeedResult(result);
     setSeeding(false);
     if (result.success) toast.success(result.message);
