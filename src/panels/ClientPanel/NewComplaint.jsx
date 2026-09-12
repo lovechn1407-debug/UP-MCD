@@ -64,14 +64,14 @@ export default function NewComplaint({ onBack }) {
     try {
       const finalType = type === 'Other' ? customType || 'Other' : type;
       const result = await createComplaint({
-        clientId: userData.id,
-        clientName: userData.name,
-        clientEmail: userData.email,
-        clientPhone: mobile,
+        clientId: userData.id || userData.uid || 'unknown',
+        clientName: userData.name || 'Citizen',
+        clientEmail: userData.email || '',
+        clientPhone: mobile || '',
         districtId,
-        type: finalType,
-        description,
-        photos,
+        type: finalType || 'Other',
+        description: description || '',
+        photos: photos || [],
         address,
         location: location || { lat: 0, lng: 0 },
         mobileNumber: mobile
