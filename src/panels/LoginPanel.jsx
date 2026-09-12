@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { loginWithCredentials, loginWithGoogle } from '../services/auth';
-import { getUserByLoginId, findUserByEmail } from '../services/firestore';
+import { loginWithCredentials, loginWithGoogle, createAuthAccount } from '../services/auth';
+import { getUserByLoginId, findUserByEmail, createUser } from '../services/firestore';
 import { useToast } from '../components/Toast';
 
 export default function LoginPanel() {
@@ -19,7 +19,8 @@ export default function LoginPanel() {
   ];
 
   const handleCredentialLogin = async (role) => {
-    if (!userId || !password) {
+    const trimmedId = userId.trim();
+    if (!trimmedId || !password) {
       setError('Please enter User ID and Password');
       return;
     }
@@ -27,19 +28,44 @@ export default function LoginPanel() {
     setError('');
     try {
       // Check Firestore for user record
-      const userDoc = await getUserByLoginId(userId, role);
+      let userDoc = await getUserByLoginId(trimmedId, role);
+
+      // Auto-bootstrap Master account if database has not been seeded yet
+      if (!userDoc && role === 'master' && (trimmedId.toUpperCase() === 'UP_MCD' || trimmedId.toUpperCase() === 'MASTER') && password === '12345678') {
+        const masterEmail = 'up_mcd@up-mcd.gov.in';
+        let masterUid = 'master_default_uid';
+        try {
+          masterUid = await createAuthAccount('UP_MCD', '12345678') || 'master_default_uid';
+        } catch (e) {}
+
+        const masterData = {
+          uid: masterUid,
+          role: 'master',
+          userId: 'UP_MCD',
+          name: 'Master Admin',
+          email: masterEmail,
+          phone: '1800-180-0000',
+          address: 'Lucknow, UP',
+          password: '12345678'
+        };
+        await createUser(masterUid, masterData);
+        userDoc = masterData;
+      }
+
       if (!userDoc) {
         setError('Invalid User ID. Account not found.');
         setLoading(false);
         return;
       }
+
       if (userDoc.password !== password) {
         setError('Invalid password.');
         setLoading(false);
         return;
       }
+
       // Login via Firebase Auth
-      await loginWithCredentials(userId, password);
+      await loginWithCredentials(userDoc.userId || trimmedId, password);
       toast.success('Login successful!');
     } catch (err) {
       console.error(err);

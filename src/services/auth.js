@@ -44,13 +44,16 @@ export async function loginWithCredentials(userId, password) {
     const result = await signInWithEmailAndPassword(auth, email, password);
     return result.user;
   } catch (error) {
+    console.warn('signInWithEmailAndPassword error code:', error.code, error.message);
     // If user doesn't exist in Auth yet, create and retry
-    if (error.code === 'auth/user-not-found') {
+    try {
       await createAuthAccount(userId, password);
       const result = await signInWithEmailAndPassword(auth, email, password);
       return result.user;
+    } catch (createErr) {
+      console.error('Failed to create & sign in auth account:', createErr);
+      throw error;
     }
-    throw error;
   }
 }
 

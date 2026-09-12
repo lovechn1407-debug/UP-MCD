@@ -49,11 +49,14 @@ export async function getUser(uid) {
 
 export async function getUserByLoginId(userId, role) {
   try {
-    const q = query(collection(db, 'users'), where('userId', '==', userId), where('role', '==', role));
+    const q = query(collection(db, 'users'), where('role', '==', role));
     const snap = await getDocs(q);
     if (snap.empty) return null;
-    const d = snap.docs[0];
-    return { id: d.id, ...d.data() };
+    const match = snap.docs.find(d => {
+      const u = d.data();
+      return u.userId && u.userId.trim().toLowerCase() === userId.trim().toLowerCase();
+    });
+    return match ? { id: match.id, ...match.data() } : null;
   } catch (err) {
     console.warn('Firestore getUserByLoginId error:', err);
     return null;
