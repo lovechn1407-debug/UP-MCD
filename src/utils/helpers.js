@@ -108,23 +108,3 @@ export function truncate(str, len = 80) {
 export function makeEmailFromId(userId) {
   return `${userId.toLowerCase().replace(/\s+/g, '_')}@up-mcd.app`;
 }
-
-export function getStatusBadge(status) {
-  switch (status) {
-    case 'registered':
-      return { label: 'Registered', bg: '#FEF3C7', color: '#D97706' };
-    case 'assigned':
-      return { label: 'Assigned', bg: '#E0F2FE', color: '#0284C7' };
-    case 'in_progress':
-      return { label: 'In Progress', bg: '#F3E8FF', color: '#8B5CF6' };
-    case 'finalized_by_worker':
-      return { label: 'Worker Finalized', bg: '#FEF9C3', color: '#CA8A04' };
-    case 'resolved':
-      return { label: 'Resolved', bg: '#DCFCE7', color: '#16A34A' };
-    case 'reopened':
-      return { label: 'Reopened', bg: '#FEE2E2', color: '#DC2626' };
-    default:
-      return { label: status || 'Pending', bg: '#F1F5F9', color: '#64748B' };
-  }
-}
-

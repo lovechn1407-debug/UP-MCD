@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getComplaints } from '../../services/firestore';
+import { Wrench, CheckSquare, Clock, CheckCircle2, User, MapPin } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export default function WorkerDashboard() {
   const { userData } = useAuth();
@@ -22,30 +24,52 @@ export default function WorkerDashboard() {
   };
 
   return (
-    <div className="dashboard">
-      <div className="dashboard__header">
-        <h1>Worker Dashboard</h1>
-        <p>Welcome, <strong>{userData?.name}</strong></p>
+    <div className="space-y-6">
+      {/* Header Banner */}
+      <div className="bg-gradient-to-r from-emerald-700 to-teal-800 rounded-3xl p-6 sm:p-8 text-white shadow-lg space-y-2">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-emerald-100 text-xs font-semibold backdrop-blur-md border border-white/20">
+          <Wrench className="w-3.5 h-3.5" />
+          <span>Field Staff Task Force</span>
+        </div>
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+          Welcome, {userData?.name || 'Worker'}
+        </h1>
+        <p className="text-xs text-emerald-100 font-medium">
+          District: <strong className="text-white capitalize">{userData?.districtId?.replace(/_/g, ' ') || 'UP Municipal'}</strong> • Mobile: {userData?.phone}
+        </p>
       </div>
-      <div className="stats-grid stats-grid--3">
-        <div className="stat-card" style={{ '--card-color': '#1B4D8E' }}>
-          <div className="stat-card__info">
-            <span className="stat-card__value" style={{ color: '#1B4D8E' }}>{loading ? '—' : stats.total}</span>
-            <span className="stat-card__label">Total Assigned</span>
+
+      {/* Metrics */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <motion.div whileHover={{ y: -2 }} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
+            <CheckSquare className="w-6 h-6" />
           </div>
-        </div>
-        <div className="stat-card" style={{ '--card-color': '#F59E0B' }}>
-          <div className="stat-card__info">
-            <span className="stat-card__value" style={{ color: '#F59E0B' }}>{loading ? '—' : stats.active}</span>
-            <span className="stat-card__label">Active Tasks</span>
+          <div>
+            <span className="text-2xl font-extrabold text-slate-900">{loading ? '—' : stats.total}</span>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Assigned</p>
           </div>
-        </div>
-        <div className="stat-card" style={{ '--card-color': '#16A34A' }}>
-          <div className="stat-card__info">
-            <span className="stat-card__value" style={{ color: '#16A34A' }}>{loading ? '—' : stats.completed}</span>
-            <span className="stat-card__label">Completed</span>
+        </motion.div>
+
+        <motion.div whileHover={{ y: -2 }} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+            <Clock className="w-6 h-6" />
           </div>
-        </div>
+          <div>
+            <span className="text-2xl font-extrabold text-slate-900">{loading ? '—' : stats.active}</span>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Pending Jobs</p>
+          </div>
+        </motion.div>
+
+        <motion.div whileHover={{ y: -2 }} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
+            <CheckCircle2 className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-2xl font-extrabold text-slate-900">{loading ? '—' : stats.completed}</span>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Completed Tasks</p>
+          </div>
+        </motion.div>
       </div>
     </div>
   );

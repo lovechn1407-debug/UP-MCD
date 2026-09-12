@@ -1,4 +1,6 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, createContext, useContext } from 'react';
+import { CheckCircle2, XCircle, Info, AlertTriangle, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const ToastContext = createContext(null);
 
@@ -10,11 +12,15 @@ export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
 
   const addToast = (message, type = 'info', duration = 4000) => {
-    const id = Date.now();
-    setToasts(prev => [...prev, { id, message, type }]);
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
+      removeToast(id);
     }, duration);
+  };
+
+  const removeToast = (id) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
   const toast = {
@@ -24,36 +30,60 @@ export function ToastProvider({ children }) {
     warning: (msg) => addToast(msg, 'warning')
   };
 
+  const getToastStyle = (type) => {
+    switch (type) {
+      case 'success':
+        return {
+          bg: 'bg-emerald-50/95 border-emerald-200 text-emerald-900',
+          icon: <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+        };
+      case 'error':
+        return {
+          bg: 'bg-rose-50/95 border-rose-200 text-rose-900',
+          icon: <XCircle className="w-5 h-5 text-rose-600 shrink-0" />
+        };
+      case 'warning':
+        return {
+          bg: 'bg-amber-50/95 border-amber-200 text-amber-900',
+          icon: <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+        };
+      default:
+        return {
+          bg: 'bg-blue-50/95 border-blue-200 text-blue-900',
+          icon: <Info className="w-5 h-5 text-blue-600 shrink-0" />
+        };
+    }
+  };
+
   return (
     <ToastContext.Provider value={toast}>
       {children}
-      <div className="toast-container">
-        {toasts.map(t => (
-          <div key={t.id} className={`toast toast--${t.type}`}>
-            {t.type === 'success' && (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/>
-              </svg>
-            )}
-            {t.type === 'error' && (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
-              </svg>
-            )}
-            {t.type === 'info' && (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
-              </svg>
-            )}
-            {t.type === 'warning' && (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-              </svg>
-            )}
-            <span>{t.message}</span>
-          </div>
-        ))}
+      <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-4">
+        <AnimatePresence>
+          {toasts.map((t) => {
+            const style = getToastStyle(t.type);
+            return (
+              <motion.div
+                key={t.id}
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.15 } }}
+                className={`pointer-events-auto flex items-center justify-between gap-3 p-3.5 rounded-xl border backdrop-blur-md shadow-lg font-medium text-sm ${style.bg}`}
+              >
+                <div className="flex items-center gap-2.5">
+                  {style.icon}
+                  <span className="leading-snug">{t.message}</span>
+                </div>
+                <button
+                  onClick={() => removeToast(t.id)}
+                  className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-black/5"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
       </div>
     </ToastContext.Provider>
   );

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { loginWithCredentials, loginWithGoogle, createAuthAccount } from '../services/auth';
-import { getUserByLoginId, findUserByEmail, createUser } from '../services/firestore';
+import { loginWithCredentials, loginWithGoogle } from '../services/auth';
+import { getUserByLoginId, createUser } from '../services/firestore';
 import { useToast } from '../components/Toast';
+import { User, ShieldCheck, Wrench, KeyRound, Lock, Building2, AlertCircle, ArrowRight, Loader2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export default function LoginPanel() {
   const [activeTab, setActiveTab] = useState('client');
@@ -12,10 +14,10 @@ export default function LoginPanel() {
   const toast = useToast();
 
   const tabs = [
-    { id: 'client', label: 'Citizen', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
-    { id: 'admin', label: 'Admin (DM)', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> },
-    { id: 'worker', label: 'Worker', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> },
-    { id: 'master', label: 'Master', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9"/></svg> }
+    { id: 'client', label: 'Citizen Portal', icon: <User className="w-4 h-4" /> },
+    { id: 'admin', label: 'District Admin', icon: <ShieldCheck className="w-4 h-4" /> },
+    { id: 'worker', label: 'Field Worker', icon: <Wrench className="w-4 h-4" /> },
+    { id: 'master', label: 'Master Admin', icon: <KeyRound className="w-4 h-4" /> }
   ];
 
   const handleCredentialLogin = async (role) => {
@@ -85,113 +87,156 @@ export default function LoginPanel() {
   };
 
   return (
-    <div className="login-page">
-      <div className="login-page__flag">
-        <div className="flag-stripe__saffron" />
-        <div className="flag-stripe__white" />
-        <div className="flag-stripe__green" />
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-between relative overflow-hidden">
+      {/* Top Tri-color Accent */}
+      <div className="h-2 w-full flex">
+        <div className="h-full w-1/3 bg-amber-500" />
+        <div className="h-full w-1/3 bg-slate-100" />
+        <div className="h-full w-1/3 bg-emerald-600" />
       </div>
 
-      <div className="login-container">
-        <div className="login-card">
-          <div className="login-card__header">
-            <div className="login-card__emblem">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#1B4D8E" strokeWidth="1.5">
-                <path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/>
-                <path d="M9 9h1"/><path d="M9 13h1"/><path d="M9 17h1"/>
-              </svg>
+      {/* Background Soft Mesh Gradients */}
+      <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-blue-400/10 blur-3xl pointer-events-none" />
+      <div className="absolute top-1/2 -right-32 w-96 h-96 rounded-full bg-indigo-400/10 blur-3xl pointer-events-none" />
+
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 md:p-8 z-10">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="max-w-md w-full bg-white border border-slate-200/90 rounded-3xl shadow-xl p-6 sm:p-8 space-y-6"
+        >
+          {/* Header Branding */}
+          <div className="text-center space-y-2">
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/25">
+              <Building2 className="w-8 h-8" />
             </div>
-            <h1>UP Municipal Civic Desk</h1>
-            <p>Government of Uttar Pradesh</p>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+              UP Municipal Civic Desk
+            </h1>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Government of Uttar Pradesh • Single Sign-On Portal
+            </p>
           </div>
 
-          <div className="login-tabs">
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                className={`login-tab ${activeTab === tab.id ? 'login-tab--active' : ''}`}
-                onClick={() => { setActiveTab(tab.id); setError(''); setUserId(''); setPassword(''); }}
-              >
-                {tab.icon}
-                <span>{tab.label}</span>
-              </button>
-            ))}
+          {/* Role Tabs */}
+          <div className="grid grid-cols-2 gap-1.5 p-1.5 bg-slate-100 rounded-2xl border border-slate-200/70">
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    setError('');
+                    setUserId('');
+                    setPassword('');
+                  }}
+                  className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl font-bold text-xs transition-all ${
+                    isActive
+                      ? 'bg-white text-blue-700 shadow-sm border border-slate-200'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  {tab.icon}
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
           </div>
 
-          <div className="login-form">
+          {/* Form Content */}
+          <div className="space-y-4">
             {activeTab === 'client' ? (
-              <div className="login-form__google">
-                <p className="login-form__info">Sign in with your Google account to file and track civic complaints in your district.</p>
-                <button className="btn btn--google" onClick={handleGoogleLogin} disabled={loading}>
-                  <svg width="20" height="20" viewBox="0 0 24 24">
+              <div className="space-y-4 text-center py-2">
+                <p className="text-xs text-slate-600 leading-relaxed px-2">
+                  Sign in instantly with your Google account to file civic complaints, upload photo evidence, and track SLA resolution progress.
+                </p>
+
+                <button
+                  onClick={handleGoogleLogin}
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 font-semibold text-sm shadow-sm transition-all hover:border-slate-400 disabled:opacity-50"
+                >
+                  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                   </svg>
-                  {loading ? 'Signing in...' : 'Sign in with Google'}
+                  <span>{loading ? 'Signing in...' : 'Sign in with Google'}</span>
                 </button>
               </div>
             ) : (
-              <>
-                <div className="form-group">
-                  <label htmlFor="login-userid">User ID</label>
-                  <div className="input-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2">
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-                    </svg>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    User ID / Login ID
+                  </label>
+                  <div className="relative">
                     <input
-                      id="login-userid"
                       type="text"
-                      className="input"
-                      placeholder="Enter your User ID"
+                      placeholder={`Enter ${activeTab} User ID`}
                       value={userId}
-                      onChange={e => setUserId(e.target.value)}
+                      onChange={(e) => setUserId(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
                     />
+                    <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                   </div>
                 </div>
-                <div className="form-group">
-                  <label htmlFor="login-password">Password</label>
-                  <div className="input-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2">
-                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                    </svg>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Password
+                  </label>
+                  <div className="relative">
                     <input
-                      id="login-password"
                       type="password"
-                      className="input"
-                      placeholder="Enter your password"
+                      placeholder="Enter password"
                       value={password}
-                      onChange={e => setPassword(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && handleCredentialLogin(activeTab)}
+                      onChange={(e) => setPassword(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleCredentialLogin(activeTab)}
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
                     />
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                   </div>
                 </div>
+
                 <button
-                  className="btn btn--primary btn--full"
                   onClick={() => handleCredentialLogin(activeTab)}
                   disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/25 transition-all disabled:opacity-50"
                 >
-                  {loading ? 'Signing in...' : 'Sign In'}
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <span>Sign In to Dashboard</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
                 </button>
-              </>
+              </div>
             )}
 
             {error && (
-              <div className="login-error">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
-                </svg>
-                {error}
-              </div>
+              <motion.div
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium"
+              >
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{error}</span>
+              </motion.div>
             )}
           </div>
-        </div>
+        </motion.div>
+      </main>
 
-        <p className="login-footer">
-          &copy; {new Date().getFullYear()} UP Municipal Civic Desk. All rights reserved.
-        </p>
-      </div>
+      {/* Footer Branding */}
+      <footer className="py-4 text-center text-xs text-slate-400 border-t border-slate-200/60 bg-white/60 backdrop-blur-xs">
+        &copy; {new Date().getFullYear()} UP Municipal Civic Desk • Department of Urban Development
+      </footer>
     </div>
   );
 }

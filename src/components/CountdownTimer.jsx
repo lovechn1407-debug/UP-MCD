@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getDaysRemaining } from '../utils/helpers';
+import { Timer, AlertCircle } from 'lucide-react';
 
 export default function CountdownTimer({ expectedDate }) {
   const [timeLeft, setTimeLeft] = useState(null);
@@ -28,15 +28,20 @@ export default function CountdownTimer({ expectedDate }) {
 
   const isUrgent = !timeLeft.overdue && timeLeft.days <= 2;
 
+  let bgClasses = 'bg-slate-100 text-slate-700 border-slate-200';
+  if (timeLeft.overdue) {
+    bgClasses = 'bg-rose-50 text-rose-700 border-rose-200 animate-pulse';
+  } else if (isUrgent) {
+    bgClasses = 'bg-amber-50 text-amber-700 border-amber-200';
+  }
+
   return (
-    <div className={`countdown ${timeLeft.overdue ? 'countdown--overdue' : ''} ${isUrgent ? 'countdown--urgent' : ''}`}>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>
-      </svg>
+    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${bgClasses}`}>
+      {timeLeft.overdue ? <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" /> : <Timer className="w-3.5 h-3.5 text-slate-500 shrink-0" />}
       {timeLeft.overdue ? (
-        <span>Overdue</span>
+        <span>SLA Overdue</span>
       ) : (
-        <span>{timeLeft.days}d {timeLeft.hours}h {timeLeft.minutes}m remaining</span>
+        <span>{timeLeft.days}d {timeLeft.hours}h {timeLeft.minutes}m SLA remaining</span>
       )}
     </div>
   );

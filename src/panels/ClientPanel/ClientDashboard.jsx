@@ -1,184 +1,177 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getComplaints, getSettings, autoResolve } from '../../services/firestore';
-import { shouldAutoResolve, formatDate, getStatusBadge } from '../../utils/helpers';
+import { shouldAutoResolve } from '../../utils/helpers';
+import {
+  PlusCircle,
+  FileText,
+  Trophy,
+  CheckCircle2,
+  Clock,
+  Sparkles,
+  Megaphone,
+  ArrowRight,
+  ShieldCheck
+} from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export default function ClientDashboard({ onNavigate }) {
   const { userData } = useAuth();
-  const [stats, setStats] = useState({ total: 0, resolved: 0, pending: 0, inProgress: 0 });
-  const [recentComplaints, setRecentComplaints] = useState([]);
+  const [stats, setStats] = useState({ total: 0, resolved: 0, pending: 0 });
   const [marquee, setMarquee] = useState('');
+  const [siteTitle, setSiteTitle] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { loadData(); }, [userData]);
 
   const loadData = async () => {
-    setLoading(true);
-    const userId = userData?.id || userData?.uid;
     const [settings, complaints] = await Promise.all([
       getSettings(),
-      userId ? getComplaints({ clientId: userId }) : Promise.resolve([])
+      userData ? getComplaints({ clientId: userData.id || userData.uid }) : Promise.resolve([])
     ]);
 
     if (settings) {
       setMarquee(settings.marqueeText || '');
+      setSiteTitle(settings.siteTitle || 'UP Municipal Civic Desk');
     }
 
-    if (complaints && complaints.length > 0) {
-      for (const c of complaints) {
-        if (c.status === 'finalized_by_worker' && shouldAutoResolve(c.workerFinalizedAt)) {
-          await autoResolve(c.id, c.districtId);
-        }
+    // Auto-resolve check
+    for (const c of complaints) {
+      if (c.status === 'finalized_by_worker' && shouldAutoResolve(c.workerFinalizedAt)) {
+        await autoResolve(c.id, c.districtId);
       }
     }
 
-    const freshComplaints = userId ? await getComplaints({ clientId: userId }) : [];
-    
+    const freshComplaints = userData ? await getComplaints({ clientId: userData.id || userData.uid }) : [];
     setStats({
       total: freshComplaints.length,
       resolved: freshComplaints.filter(c => c.status === 'resolved').length,
-      pending: freshComplaints.filter(c => c.status === 'registered' || c.status === 'assigned').length,
-      inProgress: freshComplaints.filter(c => c.status === 'in_progress' || c.status === 'finalized_by_worker').length
+      pending: freshComplaints.filter(c => c.status !== 'resolved').length
     });
-
-    setRecentComplaints(freshComplaints.slice(0, 4));
     setLoading(false);
   };
 
   return (
-    <div className="simple-dashboard">
+    <div className="space-y-6">
+      {/* Marquee Announcement Bar */}
       {marquee && (
-        <div className="marquee-bar">
-          <div className="marquee-content">
-            <span>📢 {marquee}</span>
-            <span>📢 {marquee}</span>
+        <div className="bg-amber-500 text-slate-950 px-4 py-2.5 rounded-2xl shadow-xs flex items-center gap-3 font-semibold text-xs overflow-hidden border border-amber-400">
+          <Megaphone className="w-4 h-4 shrink-0 animate-bounce" />
+          <div className="overflow-hidden whitespace-nowrap w-full">
+            <div className="inline-block animate-marquee">{marquee}</div>
           </div>
         </div>
       )}
 
-      {/* TOP BUTTONS BAR */}
-      <div className="simple-top-bar">
-        <button className="simple-btn simple-btn--primary" onClick={() => onNavigate('newComplaint')}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="16"/>
-            <line x1="8" y1="12" x2="16" y2="12"/>
-          </svg>
-          File New Complaint
-        </button>
+      {/* Hero Welcome Banner */}
+      <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-900 rounded-3xl p-6 sm:p-8 text-white shadow-lg relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div className="space-y-2 z-10">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-blue-100 text-xs font-semibold backdrop-blur-md border border-white/20">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Uttar Pradesh Citizen Grievance Desk</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            Welcome, {userData?.name || 'Citizen'}!
+          </h1>
+          <p className="text-xs sm:text-sm text-blue-100 max-w-xl leading-relaxed">
+            Report municipal issues (potholes, garbage, streetlights, water supply) directly to your District Administration with guaranteed SLA deadlines.
+          </p>
+        </div>
 
-        <button className="simple-btn simple-btn--outline" onClick={() => onNavigate('myComplaints')}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-          </svg>
-          My Complaints ({loading ? '...' : stats.total})
-        </button>
-
-        <button className="simple-btn simple-btn--outline" onClick={() => onNavigate('leaderboard')}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
-            <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
-            <path d="M4 22h16"/>
-            <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
-          </svg>
-          Honor Leaderboard
+        <button
+          onClick={() => onNavigate('newComplaint')}
+          className="z-10 inline-flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-white text-blue-700 hover:bg-blue-50 font-extrabold text-sm shadow-xl hover:shadow-2xl transition-all shrink-0 self-start sm:self-center"
+        >
+          <PlusCircle className="w-5 h-5 text-blue-600" />
+          <span>Report New Issue</span>
         </button>
       </div>
 
-      {/* DASHBOARD TITLE */}
-      <div className="simple-header">
-        <h1>Citizen Dashboard</h1>
-        <p>Track your reported civic issues and resolution updates</p>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <motion.div
+          whileHover={{ y: -2 }}
+          onClick={() => onNavigate('myComplaints')}
+          className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex items-center gap-4 cursor-pointer group"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 group-hover:scale-105 transition-transform">
+            <FileText className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-2xl font-extrabold text-slate-900">{loading ? '—' : stats.total}</span>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">My Total Complaints</p>
+          </div>
+        </motion.div>
+
+        <motion.div
+          whileHover={{ y: -2 }}
+          onClick={() => onNavigate('myComplaints')}
+          className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex items-center gap-4 cursor-pointer group"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 group-hover:scale-105 transition-transform">
+            <CheckCircle2 className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-2xl font-extrabold text-slate-900">{loading ? '—' : stats.resolved}</span>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Resolved Issues</p>
+          </div>
+        </motion.div>
+
+        <motion.div
+          whileHover={{ y: -2 }}
+          onClick={() => onNavigate('myComplaints')}
+          className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex items-center gap-4 cursor-pointer group"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 group-hover:scale-105 transition-transform">
+            <Clock className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-2xl font-extrabold text-slate-900">{loading ? '—' : stats.pending}</span>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">In Progress / Pending</p>
+          </div>
+        </motion.div>
       </div>
 
-      {/* 2 CARDS IN A ROW GRID */}
-      <div className="simple-grid-2">
-        <div className="simple-card" onClick={() => onNavigate('myComplaints')}>
-          <div className="simple-card__header">
-            <span className="simple-card__title">Total Complaints</span>
-            <div className="simple-card__icon icon-blue">📋</div>
+      {/* Quick Action Navigation Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <motion.div
+          whileHover={{ y: -2 }}
+          onClick={() => onNavigate('myComplaints')}
+          className="p-6 rounded-3xl bg-white border border-slate-200 hover:border-blue-300 shadow-sm cursor-pointer space-y-3 group"
+        >
+          <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
+            <FileText className="w-5 h-5" />
           </div>
-          <div className="simple-card__value">{loading ? '—' : stats.total}</div>
-          <span className="simple-card__sub">All filed grievances</span>
-        </div>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+              Track My Complaints
+            </h3>
+            <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-blue-600 transition-colors" />
+          </div>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            View live status, assigned field worker details, chat timeline, and resolution proof photos for your filed issues.
+          </p>
+        </motion.div>
 
-        <div className="simple-card" onClick={() => onNavigate('myComplaints')}>
-          <div className="simple-card__header">
-            <span className="simple-card__title">Resolved Issues</span>
-            <div className="simple-card__icon icon-green">✅</div>
+        <motion.div
+          whileHover={{ y: -2 }}
+          onClick={() => onNavigate('leaderboard')}
+          className="p-6 rounded-3xl bg-white border border-slate-200 hover:border-amber-300 shadow-sm cursor-pointer space-y-3 group"
+        >
+          <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+            <Trophy className="w-5 h-5" />
           </div>
-          <div className="simple-card__value text-success">{loading ? '—' : stats.resolved}</div>
-          <span className="simple-card__sub">Completed & verified</span>
-        </div>
-
-        <div className="simple-card" onClick={() => onNavigate('myComplaints')}>
-          <div className="simple-card__header">
-            <span className="simple-card__title">Pending / In Progress</span>
-            <div className="simple-card__icon icon-amber">⏳</div>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-slate-900 group-hover:text-amber-600 transition-colors">
+              District Honor Leaderboard
+            </h3>
+            <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-amber-600 transition-colors" />
           </div>
-          <div className="simple-card__value text-warning">{loading ? '—' : stats.pending + stats.inProgress}</div>
-          <span className="simple-card__sub">Currently active</span>
-        </div>
-
-        <div className="simple-card" onClick={() => onNavigate('leaderboard')}>
-          <div className="simple-card__header">
-            <span className="simple-card__title">Leaderboard Standing</span>
-            <div className="simple-card__icon icon-purple">🏆</div>
-          </div>
-          <div className="simple-card__value text-purple" style={{ fontSize: '1.4rem' }}>
-            {stats.resolved >= 5 ? 'Master Citizen' : stats.resolved >= 2 ? 'Active Contributor' : 'Civic Hero'}
-          </div>
-          <span className="simple-card__sub">District Honor rank</span>
-        </div>
-      </div>
-
-      {/* RECENT COMPLAINTS */}
-      <div className="simple-section">
-        <div className="simple-section__header">
-          <h3>Recent Complaints</h3>
-          {recentComplaints.length > 0 && (
-            <button className="simple-link" onClick={() => onNavigate('myComplaints')}>
-              View All ({stats.total}) →
-            </button>
-          )}
-        </div>
-
-        {loading ? (
-          <div className="loading-skeleton">
-            <div className="skeleton-row"></div>
-          </div>
-        ) : recentComplaints.length === 0 ? (
-          <div className="simple-empty">
-            <p>No complaints filed yet.</p>
-            <button className="simple-btn simple-btn--primary" onClick={() => onNavigate('newComplaint')}>
-              File Complaint
-            </button>
-          </div>
-        ) : (
-          <div className="simple-complaints-list">
-            {recentComplaints.map((c) => {
-              const badge = getStatusBadge(c.status);
-              return (
-                <div key={c.id} className="simple-complaint-item" onClick={() => onNavigate('myComplaints')}>
-                  <div className="simple-complaint-item__info">
-                    <div className="simple-complaint-item__code">#{c.complaintNumber || c.id.slice(0, 8)}</div>
-                    <div className="simple-complaint-item__type">{c.type}</div>
-                    <div className="simple-complaint-item__desc">{c.description}</div>
-                  </div>
-                  <div className="simple-complaint-item__meta">
-                    <span className="status-badge" style={{ background: badge.bg, color: badge.color }}>
-                      {badge.label}
-                    </span>
-                    <span className="simple-complaint-item__date">{formatDate(c.createdAt)}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+          <p className="text-xs text-slate-500 leading-relaxed">
+            See how your district ranks across Uttar Pradesh in solving municipal issues and meeting SLA deadlines.
+          </p>
+        </motion.div>
       </div>
     </div>
   );
 }
-

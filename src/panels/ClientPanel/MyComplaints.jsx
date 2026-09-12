@@ -8,6 +8,7 @@ import StatusBadge from '../../components/StatusBadge';
 import ImageUploader from '../../components/ImageUploader';
 import { useToast } from '../../components/Toast';
 import { formatDateTime } from '../../utils/helpers';
+import { FileText, ArrowLeft, CheckCircle2, XCircle, Phone, Wrench, Loader2, ExternalLink } from 'lucide-react';
 
 export default function MyComplaints() {
   const { userData } = useAuth();
@@ -26,14 +27,13 @@ export default function MyComplaints() {
   useEffect(() => { if (userData) loadComplaints(); }, [userData]);
 
   const loadComplaints = async () => {
-    const c = await getComplaints({ clientId: userData.id });
-    // Auto-resolve check
+    const c = await getComplaints({ clientId: userData.id || userData.uid });
     for (const complaint of c) {
       if (complaint.status === 'finalized_by_worker' && shouldAutoResolve(complaint.workerFinalizedAt)) {
         await autoResolve(complaint.id, complaint.districtId);
       }
     }
-    setComplaints(await getComplaints({ clientId: userData.id }));
+    setComplaints(await getComplaints({ clientId: userData.id || userData.uid }));
     setLoading(false);
   };
 
@@ -72,80 +72,142 @@ export default function MyComplaints() {
     const isFinalized = selected.status === 'finalized_by_worker';
 
     return (
-      <div className="panel-section">
-        <button className="btn btn--ghost" onClick={() => setSelected(null)}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12,19 5,12 12,5"/></svg>
-          Back
+      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
+        <button
+          onClick={() => setSelected(null)}
+          className="inline-flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3.5 py-2 rounded-xl transition-all"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to My Complaints List</span>
         </button>
-        <div className="complaint-detail">
-          <div className="complaint-detail__header">
-            <h2>{selected.complaintNumber}</h2>
-            <StatusBadge status={selected.status} />
-          </div>
-          <div className="complaint-detail__grid">
-            <div><strong>Type:</strong> {selected.type}</div>
-            <div><strong>Filed:</strong> {formatDateTime(selected.createdAt)}</div>
-            <div><strong>Address:</strong> {selected.address}</div>
-            <div><strong>District:</strong> {selected.districtId?.replace(/_/g, ' ')}</div>
-          </div>
-          <p className="complaint-detail__desc">{selected.description}</p>
-          {selected.photos?.length > 0 && (
-            <div className="complaint-detail__photos">
-              {selected.photos.map((p, i) => <a key={i} href={p} target="_blank" rel="noreferrer"><img src={p} alt="" /></a>)}
-            </div>
-          )}
 
-          {selected.assignedWorkerName && (
-            <div className="worker-info-card">
-              <h4>Assigned Worker</h4>
-              <p><strong>{selected.assignedWorkerName}</strong></p>
-              <a href={`tel:${selected.assignedWorkerPhone}`}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/>
-                </svg>
-                {selected.assignedWorkerPhone}
+        <div className="border-b border-slate-100 pb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <span className="text-xs font-bold text-slate-400 font-mono">#{selected.complaintNumber}</span>
+            <h2 className="text-xl font-extrabold text-slate-900 mt-0.5">{selected.type}</h2>
+          </div>
+          <StatusBadge status={selected.status} />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200/80 text-xs">
+          <div><span className="text-slate-400 font-semibold block">Filed Date:</span> <strong className="text-slate-900">{formatDateTime(selected.createdAt)}</strong></div>
+          <div><span className="text-slate-400 font-semibold block">District:</span> <strong className="text-slate-900 capitalize">{selected.districtId?.replace(/_/g, ' ')}</strong></div>
+          <div className="sm:col-span-3"><span className="text-slate-400 font-semibold block">Address:</span> <strong className="text-slate-900">{selected.address}</strong></div>
+        </div>
+
+        <div className="space-y-2">
+          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Complaint Details</h3>
+          <p className="text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-200">
+            {selected.description}
+          </p>
+        </div>
+
+        {selected.photos?.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">My Uploaded Photos</h3>
+            <div className="flex flex-wrap gap-3">
+              {selected.photos.map((p, i) => (
+                <a key={i} href={p} target="_blank" rel="noreferrer" className="w-24 h-24 rounded-2xl overflow-hidden border border-slate-200 block group relative">
+                  <img src={p} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {selected.assignedWorkerName && (
+          <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200 flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
+                <Wrench className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-slate-500 text-[11px]">Assigned Municipal Worker</p>
+                <strong className="text-slate-900 text-sm font-bold block">{selected.assignedWorkerName}</strong>
+              </div>
+            </div>
+            {selected.assignedWorkerPhone && (
+              <a
+                href={`tel:${selected.assignedWorkerPhone}`}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition-all"
+              >
+                <Phone className="w-3.5 h-3.5" />
+                <span>Call Worker</span>
               </a>
-            </div>
-          )}
+            )}
+          </div>
+        )}
 
-          {/* Resolution buttons */}
-          {isFinalized && (
-            <div className="resolution-actions">
-              <h3>Worker has finalized the work. Is the issue resolved?</h3>
-              {selected.workerRemark && <p className="worker-remark"><strong>Worker's Remark:</strong> {selected.workerRemark}</p>}
-              {selected.workerPhotos?.length > 0 && (
-                <div className="complaint-detail__photos">
-                  {selected.workerPhotos.map((p, i) => <a key={i} href={p} target="_blank" rel="noreferrer"><img src={p} alt="" /></a>)}
-                </div>
-              )}
-              <div className="resolution-buttons">
-                <button className="btn btn--success btn--lg" onClick={handleResolve} disabled={processing}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20,6 9,17 4,12"/></svg>
-                  Complaint Resolved
-                </button>
-                <button className="btn btn--danger btn--lg" onClick={() => setShowDecline(true)} disabled={processing}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  Not Resolved
+        {/* Resolution Actions */}
+        {isFinalized && (
+          <div className="p-5 rounded-2xl bg-amber-50/80 border border-amber-200 space-y-4">
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-amber-950">Field Worker has submitted resolution!</h3>
+              <p className="text-xs text-slate-600">Please inspect the work site and confirm if your issue is resolved.</p>
+            </div>
+
+            {selected.workerRemark && (
+              <div className="p-3 rounded-xl bg-white border border-amber-200 text-xs text-slate-700">
+                <strong className="text-slate-900">Worker's Notes:</strong> {selected.workerRemark}
+              </div>
+            )}
+
+            {selected.workerPhotos?.length > 0 && (
+              <div className="flex gap-2">
+                {selected.workerPhotos.map((p, i) => (
+                  <a key={i} href={p} target="_blank" rel="noreferrer" className="w-20 h-20 rounded-xl overflow-hidden border border-amber-200 block">
+                    <img src={p} alt="" className="w-full h-full object-cover" />
+                  </a>
+                ))}
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <button
+                onClick={handleResolve}
+                disabled={processing}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all disabled:opacity-50"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Confirm Issue Resolved</span>
+              </button>
+
+              <button
+                onClick={() => setShowDecline(!showDecline)}
+                disabled={processing}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md transition-all disabled:opacity-50"
+              >
+                <XCircle className="w-4 h-4" />
+                <span>Not Resolved (Decline)</span>
+              </button>
+            </div>
+
+            {showDecline && (
+              <div className="p-4 rounded-xl bg-white border border-rose-200 space-y-3 mt-3">
+                <h4 className="text-xs font-bold text-rose-900">Explain why the issue is not resolved</h4>
+                <textarea
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-rose-500 resize-none"
+                  value={declineRemark}
+                  onChange={e => setDeclineRemark(e.target.value)}
+                  rows={2}
+                  placeholder="Describe what work is remaining..."
+                />
+                <ImageUploader onUpload={(urls) => setDeclinePhoto(urls[0] || '')} multiple={false} label="Upload photo showing remaining issue" />
+                <button
+                  onClick={handleDecline}
+                  disabled={processing}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-sm transition-all disabled:opacity-50"
+                >
+                  {processing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+                  {processing ? 'Submitting...' : 'Submit Rejection Feedback'}
                 </button>
               </div>
+            )}
+          </div>
+        )}
 
-              {showDecline && (
-                <div className="action-card" style={{ marginTop: '1rem', borderLeft: '4px solid #DC2626' }}>
-                  <h4>Why is the issue not resolved?</h4>
-                  <div className="form-group">
-                    <label>Your Remark</label>
-                    <textarea className="input textarea" value={declineRemark} onChange={e => setDeclineRemark(e.target.value)} rows={3} placeholder="Explain why the issue persists..." />
-                  </div>
-                  <ImageUploader onUpload={(urls) => setDeclinePhoto(urls[0] || '')} multiple={false} label="Upload a current photo of the place" />
-                  <button className="btn btn--danger" onClick={handleDecline} disabled={processing} style={{ marginTop: '1rem' }}>
-                    {processing ? 'Submitting...' : 'Submit Decline'}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          <h3>Activity Timeline</h3>
+        <div className="space-y-4 pt-4 border-t border-slate-100">
+          <h3 className="text-sm font-bold text-slate-900">Activity Timeline & Official Responses</h3>
           <ChatThread thread={thread} />
         </div>
       </div>
@@ -153,17 +215,24 @@ export default function MyComplaints() {
   }
 
   return (
-    <div className="panel-section">
-      <div className="panel-section__header"><h2>My Complaints</h2></div>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-bold text-slate-900">My Complaints</h2>
+        <p className="text-xs text-slate-500">Track resolution progress and field worker updates for your filed grievances</p>
+      </div>
+
       {loading ? (
-        <div className="loading-skeleton">{[1,2,3].map(i => <div key={i} className="skeleton-card" />)}</div>
+        <div className="flex items-center justify-center py-12 text-slate-400 gap-2">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          <span className="text-sm font-medium">Loading your complaints...</span>
+        </div>
       ) : complaints.length === 0 ? (
-        <div className="empty-state">
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" strokeWidth="1"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
-          <p>You haven't filed any complaints yet</p>
+        <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center text-slate-400 space-y-2">
+          <FileText className="w-10 h-10 mx-auto stroke-[1.5]" />
+          <p className="text-sm font-medium text-slate-600">You haven't filed any complaints yet</p>
         </div>
       ) : (
-        <div className="complaints-grid">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {complaints.map(c => <ComplaintCard key={c.id} complaint={c} onClick={() => openDetail(c)} />)}
         </div>
       )}

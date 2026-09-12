@@ -3,8 +3,10 @@ import { getUsersByRole, getDistricts, createUser } from '../../services/firesto
 import { createAuthAccount } from '../../services/auth';
 import { generateWorkerId, generateWorkerPassword, makeEmailFromId } from '../../utils/helpers';
 import { useToast } from '../../components/Toast';
+import { Wrench, Plus, CheckCircle2, Loader2, MapPin, Phone } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-export default function ManageWorkers() {
+export default function ManageWorkersMaster() {
   const [workers, setWorkers] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [admins, setAdmins] = useState([]);
@@ -46,64 +48,166 @@ export default function ManageWorkers() {
       });
 
       setCreatedCreds({ userId, password });
-      toast.success('Worker created!');
+      toast.success('Worker account created!');
       setName(''); setPhone(''); setAddress(''); setDistrictId('');
+      setShowForm(false);
       loadData();
     } catch (err) { toast.error(err.message); }
     setCreating(false);
   };
 
   return (
-    <div className="panel-section">
-      <div className="panel-section__header">
-        <h2>Manage Workers</h2>
-        <button className="btn btn--primary" onClick={() => setShowForm(!showForm)}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Create Worker
+    <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shadow-sm">
+            <Wrench className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">Manage All Municipal Workers</h2>
+            <p className="text-xs text-slate-500">System-wide directory of field workers across UP districts</p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition-all"
+        >
+          <Plus className="w-4 h-4" />
+          <span>{showForm ? 'Close Form' : 'Register New Worker'}</span>
         </button>
       </div>
 
-      {showForm && (
-        <div className="form-card">
-          <div className="form-row">
-            <div className="form-group"><label>Name</label><input className="input" value={name} onChange={e => setName(e.target.value)} /></div>
-            <div className="form-group"><label>Mobile</label><input className="input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="10-digit mobile" /></div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>District</label>
-              <select className="input" value={districtId} onChange={e => setDistrictId(e.target.value)}>
-                <option value="">Select District</option>
-                {districts.map(d => <option key={d.id} value={d.id}>{d.nameEnglish}</option>)}
-              </select>
+      {/* Form Drawer */}
+      <AnimatePresence>
+        {showForm && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4 overflow-hidden"
+          >
+            <h3 className="text-sm font-bold text-slate-900">Register Field Worker</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Worker Name</label>
+                <input
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-blue-500 focus:bg-white"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="e.g. Ramesh Kumar"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Mobile Number (Password)</label>
+                <input
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-blue-500 focus:bg-white"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  placeholder="10-digit mobile number"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">District</label>
+                <select
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-blue-500 focus:bg-white"
+                  value={districtId}
+                  onChange={e => setDistrictId(e.target.value)}
+                >
+                  <option value="">Select District</option>
+                  {districts.map(d => <option key={d.id} value={d.id}>{d.nameEnglish}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Area / Ward Address</label>
+                <input
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-blue-500 focus:bg-white"
+                  value={address}
+                  onChange={e => setAddress(e.target.value)}
+                  placeholder="e.g. Zone 4, Gomti Nagar"
+                />
+              </div>
             </div>
-            <div className="form-group"><label>Address</label><input className="input" value={address} onChange={e => setAddress(e.target.value)} /></div>
-          </div>
-          <button className="btn btn--primary" onClick={handleCreate} disabled={creating}>{creating ? 'Creating...' : 'Create Worker'}</button>
-        </div>
-      )}
 
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={handleCreate}
+                disabled={creating}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition-all disabled:opacity-50"
+              >
+                {creating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                {creating ? 'Creating...' : 'Register Worker'}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Creds Modal Popup */}
       {createdCreds && (
-        <div className="creds-modal">
-          <div className="creds-card">
-            <h3>Worker Created!</h3>
-            <div className="creds-item"><span>User ID:</span><strong>{createdCreds.userId}</strong></div>
-            <div className="creds-item"><span>Password:</span><strong>{createdCreds.password}</strong></div>
-            <p className="creds-warning">Share these with the worker. Password = mobile number.</p>
-            <button className="btn btn--primary" onClick={() => setCreatedCreds(null)}>Close</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-2xl max-w-md w-full space-y-4">
+            <div className="flex items-center gap-3 text-emerald-600">
+              <CheckCircle2 className="w-8 h-8 shrink-0" />
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Worker Registered!</h3>
+                <p className="text-xs text-slate-500">Provide login credentials to the worker</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2 font-mono text-sm">
+              <div className="flex justify-between border-b border-slate-200 pb-2">
+                <span className="text-slate-500 text-xs">User ID:</span>
+                <strong className="text-blue-700 font-bold">{createdCreds.userId}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500 text-xs">Password:</span>
+                <strong className="text-slate-900 font-bold">{createdCreds.password}</strong>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setCreatedCreds(null)}
+              className="w-full py-2.5 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition-all"
+            >
+              Done & Close
+            </button>
           </div>
         </div>
       )}
 
-      <div className="data-table-wrap">
-        <table className="data-table">
-          <thead><tr><th>Name</th><th>User ID</th><th>Password</th><th>Phone</th><th>District</th><th>Address</th></tr></thead>
-          <tbody>
-            {loading ? <tr><td colSpan="6" className="text-center">Loading...</td></tr> :
-              workers.length === 0 ? <tr><td colSpan="6" className="text-center">No workers yet</td></tr> :
-              workers.map(w => (
-                <tr key={w.id}><td>{w.name}</td><td><code>{w.userId}</code></td><td><code>{w.password}</code></td><td>{w.phone}</td><td>{w.districtId}</td><td>{w.address}</td></tr>
-              ))}
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-xs text-slate-700">
+          <thead>
+            <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-500 font-semibold uppercase tracking-wider">
+              <th className="py-3 px-4">Worker Name</th>
+              <th className="py-3 px-4">User ID</th>
+              <th className="py-3 px-4">Password</th>
+              <th className="py-3 px-4">Phone</th>
+              <th className="py-3 px-4">District</th>
+              <th className="py-3 px-4">Ward Address</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {loading ? (
+              <tr><td colSpan="6" className="py-8 text-center text-slate-400">Loading field workers...</td></tr>
+            ) : workers.length === 0 ? (
+              <tr><td colSpan="6" className="py-8 text-center text-slate-400">No field workers registered yet</td></tr>
+            ) : workers.map(w => (
+              <tr key={w.id} className="hover:bg-slate-50/80 transition-colors">
+                <td className="py-3.5 px-4 font-bold text-slate-900">{w.name}</td>
+                <td className="py-3.5 px-4"><code className="bg-slate-100 px-2 py-0.5 rounded border text-blue-700 font-bold">{w.userId}</code></td>
+                <td className="py-3.5 px-4"><code className="bg-slate-100 px-2 py-0.5 rounded border text-slate-700 font-semibold">{w.password}</code></td>
+                <td className="py-3.5 px-4 text-slate-600">{w.phone}</td>
+                <td className="py-3.5 px-4 font-semibold text-slate-800">{w.districtId}</td>
+                <td className="py-3.5 px-4 text-slate-500">{w.address || '—'}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

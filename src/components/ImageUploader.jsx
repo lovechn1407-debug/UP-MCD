@@ -1,10 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { uploadToImgbb } from '../services/imgbb';
+import { Image as ImageIcon, UploadCloud, X, CheckCircle2, Loader2 } from 'lucide-react';
 
-export default function ImageUploader({ onUpload, multiple = true, label = 'Upload Photos' }) {
+export default function ImageUploader({ onUpload, multiple = true, label = 'Upload Proof Photos' }) {
   const [previews, setPreviews] = useState([]);
   const [uploading, setUploading] = useState(false);
-  const [uploadedUrls, setUploadedUrls] = useState([]);
   const fileRef = useRef();
 
   const handleFiles = (e) => {
@@ -41,50 +41,47 @@ export default function ImageUploader({ onUpload, multiple = true, label = 'Uplo
       }
     }
     setPreviews(updated);
-    setUploadedUrls(urls);
     setUploading(false);
     if (onUpload) onUpload(urls);
   };
 
   return (
-    <div className="image-uploader">
+    <div className="space-y-3">
+      {/* Dropzone */}
       <div
-        className="image-uploader__dropzone"
         onClick={() => fileRef.current?.click()}
+        className="p-6 rounded-2xl bg-slate-50 hover:bg-slate-100/80 border-2 border-dashed border-slate-200 hover:border-blue-400 transition-all cursor-pointer flex flex-col items-center justify-center text-center space-y-1.5"
       >
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
-          <path d="M21 15l-5-5L5 21"/>
-        </svg>
-        <span>{label}</span>
-        <span className="image-uploader__hint">Click or drag photos here</span>
+        <UploadCloud className="w-8 h-8 text-blue-600 mb-1" />
+        <span className="text-xs font-bold text-slate-800">{label}</span>
+        <span className="text-[11px] text-slate-400">Click or drag photos here (Max 5MB per file)</span>
         <input
           ref={fileRef}
           type="file"
           accept="image/*"
           multiple={multiple}
           onChange={handleFiles}
-          style={{ display: 'none' }}
+          className="hidden"
         />
       </div>
 
+      {/* Previews */}
       {previews.length > 0 && (
-        <div className="image-uploader__previews">
+        <div className="flex flex-wrap gap-2.5">
           {previews.map((p, i) => (
-            <div key={i} className={`image-uploader__preview ${p.uploaded ? 'uploaded' : ''}`}>
-              <img src={p.preview} alt={`Preview ${i + 1}`} />
-              {p.uploaded && (
-                <div className="image-uploader__check">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
-                    <polyline points="20,6 9,17 4,12"/>
-                  </svg>
+            <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-200 bg-white group">
+              <img src={p.preview} alt={`Preview ${i + 1}`} className="w-full h-full object-cover" />
+              {p.uploaded ? (
+                <div className="absolute inset-0 bg-emerald-600/60 backdrop-blur-2xs flex items-center justify-center text-white">
+                  <CheckCircle2 className="w-6 h-6" />
                 </div>
-              )}
-              {!p.uploaded && (
-                <button className="image-uploader__remove" onClick={() => removePreview(i)}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => removePreview(i)}
+                  className="absolute top-1 right-1 p-1 rounded-full bg-slate-900/60 text-white hover:bg-slate-900 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
@@ -92,8 +89,15 @@ export default function ImageUploader({ onUpload, multiple = true, label = 'Uplo
         </div>
       )}
 
+      {/* Upload trigger button */}
       {previews.length > 0 && previews.some(p => !p.uploaded) && (
-        <button className="btn btn--primary" onClick={uploadAll} disabled={uploading}>
+        <button
+          type="button"
+          onClick={uploadAll}
+          disabled={uploading}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-all disabled:opacity-50"
+        >
+          {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UploadCloud className="w-3.5 h-3.5" />}
           {uploading ? 'Uploading...' : `Upload ${previews.filter(p => !p.uploaded).length} Photo(s)`}
         </button>
       )}

@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { createComplaint, getDistricts } from '../../services/firestore';
 import { COMPLAINT_TYPES } from '../../utils/constants';
 import ImageUploader from '../../components/ImageUploader';
 import MapPicker from '../../components/MapPicker';
 import { useToast } from '../../components/Toast';
-import { useEffect } from 'react';
+import { ArrowLeft, Check, ChevronRight, ChevronLeft, Send, Loader2, FileText, Tag, MapPin } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function NewComplaint({ onBack }) {
   const { userData } = useAuth();
@@ -43,7 +44,6 @@ export default function NewComplaint({ onBack }) {
       const districtName = addr.state_district || addr.county || addr.city || '';
       if (districtName && addr.state?.includes('Uttar Pradesh')) {
         setAddress(data.display_name || '');
-        // Try to match district
         const match = districts.find(d =>
           d.nameEnglish?.toLowerCase().includes(districtName.toLowerCase()) ||
           districtName.toLowerCase().includes(d.nameEnglish?.toLowerCase())
@@ -76,7 +76,7 @@ export default function NewComplaint({ onBack }) {
         location: location || { lat: 0, lng: 0 },
         mobileNumber: mobile
       });
-      toast.success(`Complaint filed! ID: ${result.complaintNumber}`);
+      toast.success(`Complaint filed! Tracking ID: #${result.complaintNumber}`);
       if (onBack) onBack();
     } catch (err) {
       toast.error('Failed to file complaint: ' + err.message);
@@ -87,141 +87,221 @@ export default function NewComplaint({ onBack }) {
   const canNext = () => {
     if (step === 1) return type && (type !== 'Other' || customType);
     if (step === 2) return description.length >= 20;
-    if (step === 3) return photos.length > 0;
-    if (step === 4) return address && location;
+    if (step === 3) return true; // Photos optional
+    if (step === 4) return address && districtId;
     return true;
   };
 
+  const stepLabels = ['Issue Type', 'Description', 'Photos', 'Location', 'Review'];
+
   return (
-    <div className="panel-section">
-      <button className="btn btn--ghost" onClick={onBack}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12,19 5,12 12,5"/></svg>
-        Back
+    <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6 max-w-3xl mx-auto">
+      {/* Back button */}
+      <button
+        onClick={onBack}
+        className="inline-flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3.5 py-2 rounded-xl transition-all"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        <span>Back to Dashboard</span>
       </button>
 
-      <div className="new-complaint">
-        <h2>File New Complaint</h2>
+      <div className="space-y-1">
+        <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Report Civic Issue</h2>
+        <p className="text-xs text-slate-500">File a official complaint with your District Municipal Corporation</p>
+      </div>
 
-        {/* Progress Steps */}
-        <div className="steps-indicator">
-          {['Type', 'Details', 'Photos', 'Location', 'Review'].map((s, i) => (
-            <div key={i} className={`step ${step > i + 1 ? 'step--done' : ''} ${step === i + 1 ? 'step--active' : ''}`}>
-              <div className="step__dot">{step > i + 1 ? '✓' : i + 1}</div>
-              <span>{s}</span>
+      {/* Step Indicator */}
+      <div className="flex items-center justify-between gap-2 border-y border-slate-100 py-4 overflow-x-auto">
+        {stepLabels.map((s, i) => {
+          const isDone = step > i + 1;
+          const isActive = step === i + 1;
+          return (
+            <div key={i} className="flex items-center gap-2 shrink-0">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${
+                isDone
+                  ? 'bg-emerald-500 text-white'
+                  : isActive
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                  : 'bg-slate-100 text-slate-400'
+              }`}>
+                {isDone ? <Check className="w-4 h-4" /> : i + 1}
+              </div>
+              <span className={`text-xs font-semibold hidden sm:inline ${isActive ? 'text-slate-900' : 'text-slate-400'}`}>
+                {s}
+              </span>
+              {i < stepLabels.length - 1 && <div className="w-6 h-0.5 bg-slate-100 hidden sm:block" />}
             </div>
-          ))}
-        </div>
+          );
+        })}
+      </div>
 
-        {/* Step 1: Type */}
+      {/* Step Content */}
+      <div className="py-2">
         {step === 1 && (
-          <div className="form-card">
-            <h3>What type of issue are you reporting?</h3>
-            <div className="complaint-types-grid">
-              {COMPLAINT_TYPES.map(t => (
-                <button
-                  key={t}
-                  className={`type-btn ${type === t ? 'type-btn--selected' : ''}`}
-                  onClick={() => setType(t)}
-                >
-                  {t}
-                </button>
-              ))}
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-slate-900">Select Issue Category</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {COMPLAINT_TYPES.map(t => {
+                const isSelected = type === t;
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setType(t)}
+                    className={`p-4 rounded-2xl border text-left font-bold text-xs transition-all ${
+                      isSelected
+                        ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-sm'
+                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300'
+                    }`}
+                  >
+                    <Tag className={`w-4 h-4 mb-2 ${isSelected ? 'text-blue-600' : 'text-slate-400'}`} />
+                    <span>{t}</span>
+                  </button>
+                );
+              })}
             </div>
+
             {type === 'Other' && (
-              <div className="form-group" style={{ marginTop: '1rem' }}>
-                <input className="input" value={customType} onChange={e => setCustomType(e.target.value)} placeholder="Describe the issue type" />
+              <div className="mt-3">
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Custom Category Name</label>
+                <input
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-blue-500"
+                  value={customType}
+                  onChange={e => setCustomType(e.target.value)}
+                  placeholder="Specify issue category..."
+                />
               </div>
             )}
           </div>
         )}
 
-        {/* Step 2: Description */}
         {step === 2 && (
-          <div className="form-card">
-            <h3>Describe the issue in detail</h3>
-            <div className="form-group">
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-slate-900">Provide Detailed Description</h3>
+            <div>
               <textarea
-                className="input textarea"
+                className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 resize-none"
                 value={description}
                 onChange={e => setDescription(e.target.value)}
                 rows={6}
-                placeholder="Provide a detailed description of the civic issue (minimum 20 characters)..."
+                placeholder="Describe the issue in detail (location landmarks, safety concerns, duration of problem)..."
               />
-              <span className="form-hint">{description.length}/20 characters minimum</span>
+              <div className="flex justify-between items-center text-[11px] text-slate-400 mt-1">
+                <span>Min 20 characters required</span>
+                <span className={description.length >= 20 ? 'text-emerald-600 font-bold' : ''}>
+                  {description.length}/20
+                </span>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Step 3: Photos */}
         {step === 3 && (
-          <div className="form-card">
-            <h3>Upload photos of the issue</h3>
-            <ImageUploader onUpload={setPhotos} label="Add complaint photos" />
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-slate-900">Upload Photo Evidence (Optional)</h3>
+            <ImageUploader onUpload={setPhotos} label="Attach clear photos of the civic issue" />
           </div>
         )}
 
-        {/* Step 4: Location */}
         {step === 4 && (
-          <div className="form-card">
-            <h3>Provide the location</h3>
-            <div className="form-group">
-              <label>Address</label>
-              <textarea className="input textarea" value={address} onChange={e => setAddress(e.target.value)} rows={2} placeholder="Full address of the issue" />
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-slate-900">Location & Contact Info</h3>
+            <div>
+              <label className="text-xs font-semibold text-slate-700 block mb-1">Address / Landmark</label>
+              <textarea
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-blue-500 resize-none"
+                value={address}
+                onChange={e => setAddress(e.target.value)}
+                rows={2}
+                placeholder="Complete street address, ward number or landmark"
+              />
             </div>
-            <div className="form-group">
-              <label>Mobile Number</label>
-              <input className="input" value={mobile} onChange={e => setMobile(e.target.value)} placeholder="Your mobile number" />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Contact Mobile Number</label>
+                <input
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-blue-500"
+                  value={mobile}
+                  onChange={e => setMobile(e.target.value)}
+                  placeholder="10-digit mobile"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Select UP District</label>
+                <select
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-blue-500"
+                  value={districtId}
+                  onChange={e => setDistrictId(e.target.value)}
+                >
+                  <option value="">Select District</option>
+                  {districts.map(d => (
+                    <option key={d.id} value={d.id}>{d.nameEnglish} ({d.nameHindi})</option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <div className="form-group">
-              <label>District</label>
-              <select className="input" value={districtId} onChange={e => setDistrictId(e.target.value)}>
-                <option value="">Auto-detect or select...</option>
-                {districts.map(d => <option key={d.id} value={d.id}>{d.nameEnglish} ({d.nameHindi})</option>)}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Pin Location on Map</label>
+
+            <div>
               <MapPicker onLocationSelect={setLocation} />
             </div>
           </div>
         )}
 
-        {/* Step 5: Review */}
         {step === 5 && (
-          <div className="form-card">
-            <h3>Review Your Complaint</h3>
-            <div className="review-grid">
-              <div><strong>Type:</strong> {type === 'Other' ? customType : type}</div>
-              <div><strong>Description:</strong> {description}</div>
-              <div><strong>Photos:</strong> {photos.length} uploaded</div>
-              <div><strong>Address:</strong> {address}</div>
-              <div><strong>Mobile:</strong> {mobile}</div>
-              <div><strong>District:</strong> {districts.find(d => d.id === districtId)?.nameEnglish || districtId}</div>
-              <div><strong>Location:</strong> {location ? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}` : 'Not set'}</div>
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-slate-900">Review & Submit Complaint</h3>
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2 text-xs">
+              <div><span className="text-slate-400 font-semibold block">Category:</span> <strong className="text-slate-900">{type === 'Other' ? customType : type}</strong></div>
+              <div><span className="text-slate-400 font-semibold block">Description:</span> <p className="text-slate-700 leading-relaxed mt-0.5">{description}</p></div>
+              <div><span className="text-slate-400 font-semibold block">Address:</span> <strong className="text-slate-900">{address}</strong></div>
+              <div><span className="text-slate-400 font-semibold block">Mobile:</span> <strong className="text-slate-900">{mobile}</strong></div>
+              <div><span className="text-slate-400 font-semibold block">District:</span> <strong className="text-slate-900">{districts.find(d => d.id === districtId)?.nameEnglish || districtId}</strong></div>
+              <div><span className="text-slate-400 font-semibold block">Photos:</span> <strong className="text-slate-900">{photos.length} photo(s) attached</strong></div>
             </div>
+
             {photos.length > 0 && (
-              <div className="review-photos">
-                {photos.map((p, i) => <img key={i} src={p} alt="" />)}
+              <div className="flex gap-2">
+                {photos.map((p, i) => (
+                  <img key={i} src={p} alt="" className="w-16 h-16 rounded-xl object-cover border border-slate-200" />
+                ))}
               </div>
             )}
           </div>
         )}
+      </div>
 
-        {/* Navigation */}
-        <div className="step-nav">
-          {step > 1 && <button className="btn btn--ghost" onClick={() => setStep(step - 1)}>Previous</button>}
-          <div style={{ flex: 1 }} />
-          {step < 5 && (
-            <button className="btn btn--primary" onClick={() => setStep(step + 1)} disabled={!canNext()}>
-              Next
-            </button>
-          )}
-          {step === 5 && (
-            <button className="btn btn--success" onClick={handleSubmit} disabled={submitting}>
-              {submitting ? 'Submitting...' : 'Submit Complaint'}
-            </button>
-          )}
-        </div>
+      {/* Wizard Footer Navigation Buttons */}
+      <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+        {step > 1 ? (
+          <button
+            onClick={() => setStep(step - 1)}
+            className="inline-flex items-center gap-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-100 transition-all"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span>Previous</span>
+          </button>
+        ) : <div />}
+
+        {step < 5 ? (
+          <button
+            onClick={() => setStep(step + 1)}
+            disabled={!canNext()}
+            className="inline-flex items-center gap-1 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all disabled:opacity-50"
+          >
+            <span>Next</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        ) : (
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all disabled:opacity-50"
+          >
+            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            {submitting ? 'Submitting...' : 'Submit Official Complaint'}
+          </button>
+        )}
       </div>
     </div>
   );
