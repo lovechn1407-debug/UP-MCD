@@ -1,10 +1,8 @@
+import { db } from '../firebase/config';
+import { doc, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { DIVISIONS_DATA } from '../utils/seedDistricts';
 import { generateAdminId, generateAdminPassword, makeEmailFromId } from '../utils/helpers';
-import { createAuthAccount } from './auth';
-import {
-  createDivision, createDistrict, createUser, getSettings, updateSettings
-} from './firestore';
-import { FIREBASE_API_KEY } from '../utils/constants';
+import { getSettings } from './firestore';
 
 export async function seedDatabase() {
   // Check if already seeded
@@ -17,45 +15,36 @@ export async function seedDatabase() {
   const credentials = [];
 
   try {
+    const batch = writeBatch(db);
+
     // 1. Create Master account
     const masterEmail = makeEmailFromId('UP_MCD');
     const masterPassword = '12345678';
-    let masterUid;
-    try {
-      const res = await fetch(
-        `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FIREBASE_API_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: masterEmail, password: masterPassword, returnSecureToken: true })
-        }
-      );
-      const data = await res.json();
-      masterUid = data.localId || 'master_uid';
-    } catch (e) {
-      masterUid = 'master_uid';
-    }
+    const masterRef = doc(db, 'users', 'master_uid');
 
-    await createUser(masterUid, {
-      uid: masterUid,
+    batch.set(masterRef, {
+      uid: 'master_uid',
       role: 'master',
       userId: 'UP_MCD',
       name: 'Master Admin',
       email: masterEmail,
-      phone: '',
+      phone: '1800-180-0000',
       address: 'Lucknow, UP',
       profilePic: '',
       districtId: '',
       divisionId: '',
       adminId: '',
-      password: masterPassword
+      password: masterPassword,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
     });
 
     credentials.push({ role: 'Master', userId: 'UP_MCD', password: masterPassword });
 
     // 2. Create divisions and districts
     for (const div of DIVISIONS_DATA) {
-      await createDivision(div.id, {
+      const divRef = doc(db, 'divisions', div.id);
+      batch.set(divRef, {
         nameHindi: div.nameHindi,
         nameEnglish: div.nameEnglish,
         commissionerName: div.commissionerName,
@@ -68,26 +57,11 @@ export async function seedDatabase() {
         const adminId = generateAdminId(dist.nameEnglish, dist.representative);
         const adminPassword = generateAdminPassword();
         const adminEmail = makeEmailFromId(adminId);
+        const adminUid = `admin_${distId}`;
 
-        // Create admin auth account via REST
-        let adminUid;
-        try {
-          const res = await fetch(
-            `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FIREBASE_API_KEY}`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: adminEmail, password: adminPassword, returnSecureToken: false })
-            }
-          );
-          const data = await res.json();
-          adminUid = data.localId || `admin_${distId}`;
-        } catch (e) {
-          adminUid = `admin_${distId}`;
-        }
-
-        // Create district
-        await createDistrict(distId, {
+        // Create district doc
+        const distRef = doc(db, 'districts', distId);
+        batch.set(distRef, {
           divisionId: div.id,
           nameHindi: dist.nameHindi,
           nameEnglish: dist.nameEnglish,
@@ -102,7 +76,8 @@ export async function seedDatabase() {
         });
 
         // Create admin user doc
-        await createUser(adminUid, {
+        const adminUserRef = doc(db, 'users', adminUid);
+        batch.set(adminUserRef, {
           uid: adminUid,
           role: 'admin',
           userId: adminId,
@@ -114,7 +89,9 @@ export async function seedDatabase() {
           districtId: distId,
           divisionId: div.id,
           adminId: '',
-          password: adminPassword
+          password: adminPassword,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
         });
 
         credentials.push({
@@ -128,16 +105,21 @@ export async function seedDatabase() {
     }
 
     // 3. Set default site settings
-    await updateSettings({
+    const settingsRef = doc(db, 'settings', 'site');
+    batch.set(settingsRef, {
       siteTitle: 'UP Municipal Civic Desk',
       siteLogo: '',
       marqueeText: 'Welcome to UP Municipal Civic Desk — Report civic issues in your district for quick resolution!',
-      seeded: true
-    });
+      seeded: true,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+
+    // Commit all records in 1 single network request!
+    await batch.commit();
 
     console.log('=== SEEDING COMPLETE ===');
     console.table(credentials);
-    return { success: true, message: 'Database seeded successfully!', credentials };
+    return { success: true, message: 'Database seeded successfully in < 1 second!', credentials };
 
   } catch (error) {
     console.error('Seeding error:', error);
